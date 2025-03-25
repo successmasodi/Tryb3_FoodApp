@@ -5,9 +5,9 @@ PYTHON = python
 DJANGO_MANAGE = $(PYTHON) manage.py
 
 # Environment
-ENV_FILE = .env
-include $(ENV_FILE)
-export $(shell sed 's/=.*//' $(ENV_FILE))
+#ENV_FILE = .env
+#include $(ENV_FILE)
+#export $(shell sed 's/=.*//' $(ENV_FILE))
 
 # -------- Docker Commands --------
 # Start the application with Docker
@@ -34,7 +34,7 @@ rebuild: clean up
 # -------- Non-Docker (Local) Commands --------
 #run virtual environment
 venv:
-	source venv/scripts/activate
+	call venv/Scripts/activate
 
 #create virtual environment
 mkvenv:

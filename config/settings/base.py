@@ -39,10 +39,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'drf_yasg',
-    'django_filters',
+    # 'django_filters',
     'rest_framework',
     'api',
-    'authentication',
+    'apps.authentication',
 ]
 
 MIDDLEWARE = [
@@ -94,7 +94,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-AUTH_USER_MODEL = "authentication.urls"
+AUTH_USER_MODEL = "authentication.User"
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/

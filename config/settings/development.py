@@ -1,7 +1,6 @@
+from .base import *
 from dotenv import load_dotenv
 load_dotenv()
-from .base import *
-
 
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]

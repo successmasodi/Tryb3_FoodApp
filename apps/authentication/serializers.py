@@ -1,6 +1,7 @@
-from customuser.models import User
 from rest_framework import serializers
-from api.serializers import OrderSerializer
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class ForgotPasswordRequestSerializer(serializers.Serializer):
@@ -25,11 +26,10 @@ class UserProfileSerializer(serializers.Serializer):
 
 
 class ViewUserProfileSerializer(serializers.ModelSerializer):
-    order_history = OrderSerializer(many=True, read_only=True)
 
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'email', 'phone_number', 'order_history']
+        fields = ['id', 'first_name', 'last_name', 'email', 'phone_number',]
 
 
 class PasswordChangeRequestSerializer(serializers.Serializer):
@@ -67,14 +67,6 @@ class UserSignupSerializerOTP(serializers.Serializer):
 
 class UserSignupSerializerResendOTP(serializers.Serializer):
     email = serializers.EmailField()
-
-
-class EmailVerificationSerializer(serializers.ModelSerializer):
-    token = serializers.CharField(max_length=555)
-
-    class Meta:
-        model = User
-        fields = ['token']
 
 
 class LoginSerializer(serializers.ModelSerializer):

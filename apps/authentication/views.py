@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.core.mail import send_mail
 import random
@@ -7,7 +8,6 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from django.contrib.auth.hashers import make_password
 from rest_framework.exceptions import AuthenticationFailed
-from customuser.models import User
 from .serializers import (UserSignupSerializer, LoginSerializer, PasswordChangeRequestSerializer, \
                           UserProfileSerializer, ForgotPasswordRequestSerializer, UserSignupSerializerResendOTP,
                           UserSignupSerializerOTP, ViewUserProfileSerializer)
@@ -17,6 +17,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .models import EmailChangeRequest, PasswordChangeRequest, ForgotPasswordRequest, NameChangeRequest
 from django.utils.timezone import now
+
+User = get_user_model()
 
 
 class ForgotPasswordViewSet(viewsets.ModelViewSet):
@@ -673,7 +675,7 @@ class LogoutViewSet(viewsets.ViewSet):
 
             # Invalidate the refresh token
             token = RefreshToken(refresh_token)
-            token.blacklist()  # This will invalidate the refresh token
+            token.blacklist()
 
             return Response({"detail": "Logout successful."}, status=status.HTTP_200_OK)
         except Exception as e:
