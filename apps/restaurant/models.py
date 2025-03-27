@@ -14,9 +14,6 @@ class Cuisine(models.Model):
         null=True
     )
 
-    def get_restaurant_count(self):
-        return self.restaurants.count()
-
     class Meta:
         verbose_name = 'Cuisine'
         verbose_name_plural = 'Cuisines'
@@ -130,7 +127,7 @@ class Dish(models.Model):
         related_name='dishes',
         null=True
     )
-    preparation_time = models.PositiveIntegerField(
+    preparation_time = models.IntegerField(
         help_text="Preparation time in minutes"
     )
     is_vegetarian = models.BooleanField(default=False)
