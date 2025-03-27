@@ -3,15 +3,13 @@ from .models import Cuisine, FoodCategory, Restaurant, Dish
 
 
 class CuisineSerializer(serializers.ModelSerializer):
-    restaurant_count = serializers.SerializerMethodField(read_only=True)
+    restaurant_count = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Cuisine
         fields = ('id', 'name', 'slug', 'description','restaurant_count' ,'image')
         read_only_fields = ['id', 'slug' ]
 
-    def get_restaurant_count(self,obj):
-        '''using annotate to create the restaurant'''
-        return obj.restaurant_count
 
 class SimpleCuisineSerializer(serializers.ModelSerializer):
     class Meta:
@@ -21,9 +19,11 @@ class SimpleCuisineSerializer(serializers.ModelSerializer):
 
 
 class FoodCategorySerializer(serializers.ModelSerializer):
+    dish_count = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = FoodCategory
-        fields = ('id', 'name', 'slug', 'description')
+        fields = ('id', 'name', 'slug', 'dish_count', 'description')
         read_only_fields = ['id','slug']
 
 

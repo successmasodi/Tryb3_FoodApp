@@ -10,6 +10,7 @@ class CuisineViewSet(ModelViewSet):
   queryset = Cuisine.objects.annotate(restaurant_count=Count('restaurants'))
   serializer_class = CuisineSerializer
 
+
 class FoodCategoryViewSet(ModelViewSet):
-  queryset = FoodCategory.objects.annotate(restaurant_count=Count('dishes'))
+  queryset = FoodCategory.objects.annotate(dish_count=Count('dishes'))
   serializer_class = FoodCategorySerializer
