@@ -3,6 +3,7 @@ from .models import Cuisine, Restaurant, Dish,FoodCategory
 
 # Register your models here.
 
+
 @admin.register(Cuisine)
 class CuisineAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ['name']}
@@ -36,7 +37,7 @@ class RestaurantAdmin(admin.ModelAdmin):
     list_editable = ('name', 'rating', 'is_featured', 'cuisine')
     list_filter = ('cuisine', 'is_featured', 'rating')
     search_fields = ('name', 'address', 'description')
-    list_select_related = ('cuisine', 'owner')  # Optimizing related queries
+    list_select_related = ('cuisine', 'owner')
     show_facets = admin.ShowFacets.ALWAYS
     date_hierarchy = 'date_joined'
 

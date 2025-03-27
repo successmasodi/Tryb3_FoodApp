@@ -39,8 +39,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'drf_yasg',
+
     # 'django_filters',
     'rest_framework',
+    
+    # local apps
     'api',
     'apps.authentication',
     'apps.restaurant',
