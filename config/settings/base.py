@@ -43,7 +43,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'api',
     'apps.authentication',
+    'apps.restaurant',
 ]
+
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
