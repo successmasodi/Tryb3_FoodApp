@@ -2,7 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone,text
 from django.conf import settings
-
+from .managers import (CuisineManager, FoodCategoryManager,RestaurantManager)
 
 class Cuisine(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -13,6 +13,7 @@ class Cuisine(models.Model):
         blank=True,
         null=True
     )
+    objects = CuisineManager()
 
     class Meta:
         verbose_name = 'Cuisine'
@@ -32,6 +33,7 @@ class FoodCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=100, unique=True)
     description = models.TextField(blank=True)
+    objects = FoodCategoryManager()
 
     class Meta:
         verbose_name = 'Food Category'
@@ -87,11 +89,12 @@ class Restaurant(models.Model):
     is_featured = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
     created_at = models.DateTimeField(auto_now_add=True)
+    objects = RestaurantManager()
 
     class Meta:
         verbose_name = 'Restaurant'
         verbose_name_plural = 'Restaurants'
-        ordering = ('name',)
+        ordering = ('-is_featured', '-rating', 'name')
         indexes = [
             models.Index(fields=['slug']),
             models.Index(fields=['cuisine', 'is_featured']),
@@ -133,7 +136,8 @@ class Dish(models.Model):
     is_vegetarian = models.BooleanField(default=False)
     is_vegan = models.BooleanField(default=False)
     is_gluten_free = models.BooleanField(default=False)
-    is_available = models.BooleanField(default=True)
+    is_featured = models.BooleanField(default=False)
+    is_available= models.BooleanField(default=True, help_text="a dish won't be available if it's out of stock")
     image = models.ImageField(
         upload_to='dish_images/',
         blank=True,
@@ -144,9 +148,9 @@ class Dish(models.Model):
 
     class Meta:
         verbose_name_plural = 'Dishes'
-        ordering = ('name',)
+        ordering = ('is_featured', 'is_available', 'price', 'name')
         indexes = [
-            models.Index(fields=['restaurant', 'is_available']),
+            models.Index(fields=[ 'is_featured','is_available', 'price', 'name',]),
         ]
 
     def __str__(self):
@@ -162,3 +166,5 @@ class Dish(models.Model):
                 counter += 1
             self.slug = unique_slug
         super().save(*args, **kwargs)
+
+

@@ -38,12 +38,10 @@ class SimpleRestaurantSerializer(serializers.ModelSerializer):
         ]
 
 class SimpleDishSerializer(serializers.ModelSerializer):
-    restaurant = SimpleRestaurantSerializer(read_only=True)
     class Meta:
         model = Dish
         fields = (
-            'id','name', 'price',  'restaurant', 
-            'category', 'preparation_time'
+            'id','name', 'description','price','category', 'image'
         )
         read_only_fields = ['id', 'restaurant']
 
@@ -51,6 +49,7 @@ class SimpleDishSerializer(serializers.ModelSerializer):
 class RestaurantSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField(read_only=True)
     cuisine =SimpleCuisineSerializer(read_only=True)
+    menu_count = serializers.IntegerField(source='dish_count',read_only=True)
     menu = SimpleDishSerializer(source='dishes', many=True, read_only=True)
 
     class Meta:
@@ -58,7 +57,7 @@ class RestaurantSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'owner', 'name', 'slug', 'description', 'address', 
             'cuisine', 'rating', 'delivery_time', 'minimum_order', 
-            'image', 'cover_image','is_featured', 'menu', 'created_at', 'date_joined'
+            'image', 'cover_image','is_featured','menu_count' , 'menu', 'created_at', 'date_joined'
         )
         read_only_fields = [
             'id', 'slug', 'rating', 'created_at', 'updated_at', 'owner', 'dishes'

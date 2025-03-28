@@ -4,8 +4,10 @@ from rest_framework import routers
 
 router = routers.DefaultRouter()
 
-router.register('cuisines',views.CuisineViewSet,basename='cuisines')
+router.register('cuisines_types',views.CuisineViewSet,basename='cuisines')
 router.register('categories',views.FoodCategoryViewSet,basename='categories')
+router.register('restaurants',views.RestaurantViewSet,basename='Restaurants')
+router.register('dishes',views.DishViewSet,basename='dishes')
 
 urlpatterns = [
     path("", include(router.urls)),
