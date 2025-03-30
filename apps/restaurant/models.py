@@ -194,3 +194,81 @@ class CartItem(models.Model):
 
     def __str__(self):
         return f"Cart item: {self.dish.name} x {self.quantity}"
+    
+
+class Order(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'), ('confirmed', 'Confirmed'),
+        ('ready', 'Ready for Delivery'), ('delivered', 'Delivered'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    PAYMENT_STATUS_CHOICES = [
+        ('pending', 'Pending'), ('paid', 'Paid'),
+        ('failed', 'Failed'), ('refunded', 'Refunded'),
+    ]
+
+    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='orders')
+    order_number = models.CharField(max_length=20, unique=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
+    delivery_address = models.TextField()
+    special_instructions = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ('-created_at',)
+        indexes = [
+            models.Index(fields=['order_number']),
+            models.Index(fields=['status', 'payment_status']),
+        ]
+
+    @property
+    def restaurants(self):
+        return self.items.values_list('dish__restaurant', flat=True).distinct()
+
+
+    @property
+    def total(self):
+        return sum(item.subtotal for item in self.items.all())
+
+    def save(self, *args, **kwargs):
+        if not self.order_number:
+            date_part = timezone.now().strftime('%Y%m%d')
+            last_order = Order.objects.order_by('-id').first() # last order
+            sequence = (last_order.id + 1) if last_order else 1
+            self.order_number = f"ORD-{date_part}-{sequence:06d}"
+
+        if self.pk:
+            if self.status == 'Delivered' and self.payment_status == 'Paid' and not self.delivered_at:
+                self.delivered_at = timezone.now()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Order #{self.order_number}"
+
+class OrderItem(models.Model):
+    id = models.UUIDField(primary_key=True, unique=True, default=uuid4)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    dish = models.ForeignKey(Dish, on_delete=models.PROTECT, related_name='order_items')
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.PROTECT, related_name='order_items')
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)]) # this field must be set automatically
+    special_requests = models.TextField(blank=True)
+
+    def save(self, *args, **kwargs):
+        # Automatically set restaurant from dish if not specified
+        if not self.restaurant_id:
+            self.restaurant = self.dish.restaurant
+        super().save(*args, **kwargs)
+
+    @property
+    def subtotal(self):
+        return self.dish.unit_price * self.quantity
+
+    class Meta:
+        unique_together = ('order', 'dish')
+
+    def __str__(self):
+        return f"{self.dish.name} x {self.quantity}"
