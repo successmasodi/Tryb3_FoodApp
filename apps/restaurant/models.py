@@ -2,7 +2,9 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone,text
 from django.conf import settings
+from uuid import uuid4
 from .managers import (CuisineManager, FoodCategoryManager,RestaurantManager)
+
 
 class Cuisine(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -119,9 +121,8 @@ class Dish(models.Model):
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True)
     description = models.TextField(blank=True)
-    price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
+    unit_price = models.DecimalField(
+        max_digits=10, decimal_places=2,
         validators=[MinValueValidator(0.01)]
     )
     category = models.ForeignKey(
@@ -148,9 +149,9 @@ class Dish(models.Model):
 
     class Meta:
         verbose_name_plural = 'Dishes'
-        ordering = ('is_featured', 'is_available', 'price', 'name')
+        ordering = ('is_featured', 'is_available', 'unit_price', 'name')
         indexes = [
-            models.Index(fields=[ 'is_featured','is_available', 'price', 'name',]),
+            models.Index(fields=[ 'is_featured','is_available', 'unit_price', 'name',]),
         ]
 
     def __str__(self):
@@ -168,3 +169,28 @@ class Dish(models.Model):
         super().save(*args, **kwargs)
 
 
+class Cart(models.Model):
+
+    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='cart')
+    created_at = models.DateTimeField(auto_now_add=True)
+    update_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Cart #{self.id} - {self.customer.email}"
+
+
+class CartItem(models.Model):
+    id = models.UUIDField(primary_key=True, unique=True, default=uuid4)
+    cart = models.ForeignKey(Cart,on_delete=models.CASCADE, related_name='items')
+    dish = models.ForeignKey(Dish, on_delete=models.CASCADE,related_name='cart_items')
+    quantity = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
+
+    def sub_total(self):
+        return self.dish.unit_price * self.quantity
+
+    class Meta:
+        # dish shouldn't belong to a same cart twice instead the quantity should be increased
+        unique_together = ('cart', 'dish')
+
+    def __str__(self):
+        return f"Cart item: {self.dish.name} x {self.quantity}"

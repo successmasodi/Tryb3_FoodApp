@@ -37,7 +37,7 @@ class RestaurantViewSet(ModelViewSet):
         '-is_featured', '-rating', 'name
     filter by:
         'is featured',  'rating', 'cuisine name', 'owner', 'dish_count',
-    
+
     dish_count: number of dishes by the restaurant
     '''
 
@@ -49,8 +49,8 @@ class RestaurantViewSet(ModelViewSet):
         'name', 'address', 'cuisine__name', 'dishes__name'
     ]
     filterset_fields = [
-        'is_featured', 'rating', 'cuisine__name','dish_count',
-        'owner', 
+        'is_featured', 'rating', 'cuisine__name', 'dish_count',
+        'owner',
     ]
 
 
@@ -59,7 +59,7 @@ class DishViewSet(ModelViewSet):
     search by:
         'name', 'restaurant name', 'category name'
     ordered by: 
-        'is_featured', 'is_available', 'price', 'name'
+        'is_featured', 'is_available', 'unit_price', 'name'
     filter by:
         'is_featured', 'restaurant', 'category',
         'is_vegetarian', 'is_vegan',

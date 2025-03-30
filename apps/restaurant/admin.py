@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.db.models.aggregates import Count
-from .models import Cuisine, Restaurant, Dish,FoodCategory
+from .models import Cuisine, Restaurant, Dish, FoodCategory
 
 # Register your models here.
 
@@ -15,7 +15,7 @@ class CuisineAdmin(admin.ModelAdmin):
     show_facets = admin.ShowFacets.ALWAYS
 
     @admin.display(ordering='restaurant_count')
-    def restaurant_count(self,cuisine):
+    def restaurant_count(self, cuisine):
         return cuisine.restaurant_count
 
 
@@ -37,9 +37,10 @@ class FoodCategoryAdmin(admin.ModelAdmin):
 @admin.register(Restaurant)
 class RestaurantAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ['name']}
-    fields = ('owner', 'name', 'slug', 'description', 'address', 'cuisine', 'rating', 'delivery_time', 
+    fields = ('owner', 'name', 'slug', 'description', 'address', 'cuisine', 'rating', 'delivery_time',
               'minimum_order', 'image', 'cover_image', 'is_featured', 'date_joined')
-    list_display = ('id', 'name', 'owner', 'cuisine','dish_count' ,'rating', 'is_featured', 'delivery_time', 'minimum_order')
+    list_display = ('id', 'name', 'owner', 'cuisine', 'dish_count',
+                    'rating', 'is_featured', 'delivery_time', 'minimum_order')
     list_editable = ('name', 'rating', 'is_featured', 'cuisine')
     list_filter = ('cuisine', 'is_featured', 'rating')
     search_fields = ('name', 'address', 'description')
@@ -52,15 +53,16 @@ class RestaurantAdmin(admin.ModelAdmin):
         return obj.dish_count
 
 
-
 @admin.register(Dish)
 class DishAdmin(admin.ModelAdmin):
-    fields = ('restaurant', 'name', 'description', 'price', 'category', 'preparation_time', 
-              'is_vegetarian', 'is_vegan', 'is_gluten_free', 'is_available','is_featured', 'image')
-    list_display = ('id', 'name', 'restaurant', 'price', 'category', 'is_available','is_featured')
-    list_editable = ('name', 'price', 'is_available', 'category')
-    list_filter = ('is_vegetarian', 'is_vegan', 'is_gluten_free', 'is_available', 'is_featured', 'category')
-    search_fields = ('name', 'description', 'price')
+    fields = ('restaurant', 'name', 'description', 'unit_price', 'category', 'preparation_time',
+              'is_vegetarian', 'is_vegan', 'is_gluten_free', 'is_available', 'is_featured', 'image')
+    list_display = ('id', 'name', 'restaurant', 'unit_price',
+                    'category', 'is_available', 'is_featured')
+    list_editable = ('name', 'unit_price', 'is_available', 'category')
+    list_filter = ('is_vegetarian', 'is_vegan', 'is_gluten_free',
+                   'is_available', 'is_featured', 'category')
+    search_fields = ('name', 'description', 'unit_price')
     list_select_related = ('restaurant', 'category')
     show_facets = admin.ShowFacets.ALWAYS
 

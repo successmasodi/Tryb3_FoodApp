@@ -7,15 +7,16 @@ class CuisineSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Cuisine
-        fields = ('id', 'name', 'slug', 'description','restaurant_count' ,'image')
-        read_only_fields = ['id', 'slug' ]
+        fields = ('id', 'name', 'slug', 'description',
+                  'restaurant_count', 'image')
+        read_only_fields = ['id', 'slug']
 
 
 class SimpleCuisineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cuisine
         fields = ('id', 'name', 'slug',)
-        read_only_fields = ['id', 'slug' ]
+        read_only_fields = ['id', 'slug']
 
 
 class FoodCategorySerializer(serializers.ModelSerializer):
@@ -24,7 +25,7 @@ class FoodCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = FoodCategory
         fields = ('id', 'name', 'slug', 'dish_count', 'description')
-        read_only_fields = ['id','slug']
+        read_only_fields = ['id', 'slug']
 
 
 class SimpleRestaurantSerializer(serializers.ModelSerializer):
@@ -34,30 +35,33 @@ class SimpleRestaurantSerializer(serializers.ModelSerializer):
             'id', 'name',  'rating',
         )
         read_only_fields = [
-           'id', 'rating',
+            'id', 'rating',
         ]
 
+
 class SimpleDishSerializer(serializers.ModelSerializer):
+    price = serializers.DecimalField(source='unit_price', max_digits=10, decimal_places=2,)
+
     class Meta:
         model = Dish
         fields = (
-            'id','name', 'description','price','category', 'image'
+            'id', 'name', 'description', 'price', 'category', 'image'
         )
         read_only_fields = ['id', 'restaurant']
 
 
 class RestaurantSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField(read_only=True)
-    cuisine =SimpleCuisineSerializer(read_only=True)
-    menu_count = serializers.IntegerField(source='dish_count',read_only=True)
+    cuisine = SimpleCuisineSerializer(read_only=True)
+    menu_count = serializers.IntegerField(source='dish_count', read_only=True)
     menu = SimpleDishSerializer(source='dishes', many=True, read_only=True)
 
     class Meta:
         model = Restaurant
         fields = (
-            'id', 'owner', 'name', 'slug', 'description', 'address', 
-            'cuisine', 'rating', 'delivery_time', 'minimum_order', 
-            'image', 'cover_image','is_featured','menu_count' , 'menu', 'created_at', 'date_joined'
+            'id', 'owner', 'name', 'slug', 'description', 'address',
+            'cuisine', 'rating', 'delivery_time', 'minimum_order',
+            'image', 'cover_image', 'is_featured', 'menu_count', 'menu', 'created_at', 'date_joined'
         )
         read_only_fields = [
             'id', 'slug', 'rating', 'created_at', 'updated_at', 'owner', 'dishes'
@@ -67,13 +71,14 @@ class RestaurantSerializer(serializers.ModelSerializer):
 class DishSerializer(serializers.ModelSerializer):
     restaurant = SimpleRestaurantSerializer(read_only=True)
     categories = FoodCategorySerializer(many=True, read_only=True)
+    price = serializers.DecimalField(source='unit_price', max_digits=10, decimal_places=2,)
 
     class Meta:
         model = Dish
         fields = (
-            'id', 'restaurant', 'name', 'description', 'price', 
-            'categories', 'preparation_time', 'is_vegetarian', 
-            'is_vegan', 'is_gluten_free', 'is_available', 
+            'id', 'restaurant', 'name', 'description', 'price',
+            'categories', 'preparation_time', 'is_vegetarian',
+            'is_vegan', 'is_gluten_free', 'is_available',
             'image', 'created_at', 'updated_at'
         )
-        read_only_fields = ['id','restaurant', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'restaurant', 'created_at', 'updated_at']
