@@ -71,14 +71,28 @@ class RestaurantSerializer(serializers.ModelSerializer):
 
 class DishSerializer(serializers.ModelSerializer):
     restaurant = SimpleRestaurantSerializer(read_only=True)
-    categories = FoodCategorySerializer(many=True, read_only=True)
+    category = FoodCategorySerializer(read_only=True)
+    food_category = serializers.SlugRelatedField(
+        source='category',
+        queryset=FoodCategory.objects.all(),
+        slug_field='name',
+        write_only=True
+    )
     price = serializers.DecimalField(source='unit_price', max_digits=10, decimal_places=2,)
+
+    def validate(self, attrs):
+        '''A user must have atleast a restaurat before creating dishes.'''
+        if not Restaurant.objects.filter(owner=self.context['user']).exists():
+            raise serializers.ValidationError(
+                'You should own a restaurant before creating a dish.'
+            )
+        return attrs
 
     class Meta:
         model = Dish
         fields = (
             'id', 'restaurant', 'name', 'description', 'price',
-            'categories', 'preparation_time', 'is_vegetarian',
+            'category', 'food_category','preparation_time', 'is_vegetarian',
             'is_vegan', 'is_gluten_free', 'is_available',
             'image', 'created_at', 'updated_at'
         )

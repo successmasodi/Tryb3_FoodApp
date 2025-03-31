@@ -59,7 +59,7 @@ class DishAdmin(admin.ModelAdmin):
               'is_vegetarian', 'is_vegan', 'is_gluten_free', 'is_available', 'is_featured', 'image')
     list_display = ('id', 'name', 'restaurant', 'unit_price',
                     'category', 'is_available', 'is_featured')
-    list_editable = ('name', 'unit_price', 'is_available', 'category')
+    list_editable = ('name', 'unit_price', 'is_available','is_featured', 'category')
     list_filter = ('is_vegetarian', 'is_vegan', 'is_gluten_free',
                    'is_available', 'is_featured', 'category')
     search_fields = ('name', 'description', 'unit_price')

@@ -7,7 +7,7 @@ from .serializers import ( CuisineSerializer, FoodCategorySerializer, Restaurant
                           , CartSerializer
                           )
 
-from .permissions import ( IsAdminOrReadOnly, IsOwnerOrReadOnly, CartAlreadyExist,
+from .permissions import ( IsAdminOrReadOnly, IsOwnerOrReadOnly, IsRestaurantOwnerOrReadOnly , CartAlreadyExist,
                           )
 
 # Create your views here.
@@ -36,7 +36,7 @@ class FoodCategoryViewSet(ModelViewSet):
 
 
 class RestaurantViewSet(ModelViewSet):
-    '''View for Restaurant. 
+    '''View for Restaurant.
     search by:
         'name', 'address', 'cuisine name', 'dishes name'
     ordered by: 
@@ -48,6 +48,7 @@ class RestaurantViewSet(ModelViewSet):
 
     permission: Only owner can modify object.
     '''
+    # Currently a user can own more than one restaurant. is this okay?
 
     queryset = Restaurant.objects.select_related('owner', 'cuisine').prefetch_related('dishes')
     serializer_class = RestaurantSerializer
@@ -75,19 +76,26 @@ class DishViewSet(ModelViewSet):
         'is_vegetarian', 'is_vegan',
         'is_gluten_free',  'is_available'
     '''
-    queryset = Dish.objects.select_related(
-        'restaurant', 'restaurant__cuisine'
+
+    queryset = Dish.objects.select_related('restaurant', 'restaurant__cuisine'
     ).prefetch_related('category')
     serializer_class = DishSerializer
+    permission_classes = [ IsRestaurantOwnerOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    search_fields = [
-        'name', 'restaurant__name', 'category__name'
-    ]
+    search_fields = ['name', 'restaurant__name', 'category__name']
     filterset_fields = [
         'is_featured', 'restaurant', 'category',
         'is_vegetarian', 'is_vegan',
         'is_gluten_free',  'is_available'
     ]
+
+    def perform_create(self, serializer):
+        restaurant = Restaurant.objects.filter(owner=self.request.user).first()
+        serializer.save(restaurant=restaurant)
+
+
+    def get_serializer_context(self):
+        return {'user':self.request.user}
 
 
 class CartViewSet(ModelViewSet):
