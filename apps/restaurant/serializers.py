@@ -59,6 +59,13 @@ class RestaurantSerializer(serializers.ModelSerializer):
     menu_count = serializers.IntegerField(source='dish_count', read_only=True)
     menu = SimpleDishSerializer(source='dishes', many=True, read_only=True)
 
+
+    def validate(self, attrs):
+        
+        if Restaurant.objects.only('id').filter(owner=self.context['user']).exists():
+            raise serializers.ValidationError('You own a restaurant already.')
+        return super().validate(attrs)
+
     class Meta:
         model = Restaurant
         fields = (
@@ -67,7 +74,6 @@ class RestaurantSerializer(serializers.ModelSerializer):
             'image', 'cover_image', 'is_featured', 'menu_count', 'menu','date_joined'
         )
         read_only_fields = [ 'id', 'slug', 'rating', 'owner']
-
 
 class DishSerializer(serializers.ModelSerializer):
     restaurant = SimpleRestaurantSerializer(read_only=True)
@@ -81,7 +87,8 @@ class DishSerializer(serializers.ModelSerializer):
     price = serializers.DecimalField(source='unit_price', max_digits=10, decimal_places=2,)
 
     def validate(self, attrs):
-        '''A user must have atleast a restaurat before creating dishes.'''
+        '''A user must have a restaurant before creating dishes.'''
+
         if not Restaurant.objects.filter(owner=self.context['user']).exists():
             raise serializers.ValidationError(
                 'You should own a restaurant before creating a dish.'

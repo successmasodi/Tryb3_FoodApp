@@ -94,8 +94,6 @@ class Restaurant(models.Model):
     objects = RestaurantManager()
 
     class Meta:
-        verbose_name = 'Restaurant'
-        verbose_name_plural = 'Restaurants'
         ordering = ('-is_featured', '-rating', 'name')
         indexes = [
             models.Index(fields=['slug']),
@@ -113,7 +111,7 @@ class Restaurant(models.Model):
 
 class Dish(models.Model):
     #same as menu
-    restaurant = models.ForeignKey(
+    restaurant = models.OneToOneField(
         Restaurant,
         on_delete=models.CASCADE,
         related_name='dishes'
@@ -128,22 +126,15 @@ class Dish(models.Model):
     category = models.ForeignKey(
         FoodCategory,
         on_delete=models.SET_NULL,
-        related_name='dishes',
-        null=True
+        related_name='dishes', null=True
     )
-    preparation_time = models.IntegerField(
-        help_text="Preparation time in minutes"
-    )
+    preparation_time = models.IntegerField(help_text="Preparation time in minutes")
     is_vegetarian = models.BooleanField(default=False)
     is_vegan = models.BooleanField(default=False)
     is_gluten_free = models.BooleanField(default=False)
     is_featured = models.BooleanField(default=False)
     is_available= models.BooleanField(default=True, help_text="a dish won't be available if it's out of stock")
-    image = models.ImageField(
-        upload_to='dish_images/',
-        blank=True,
-        null=True
-    )
+    image = models.ImageField(upload_to='dish_images/',blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

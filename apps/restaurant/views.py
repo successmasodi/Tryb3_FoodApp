@@ -7,7 +7,7 @@ from .serializers import ( CuisineSerializer, FoodCategorySerializer, Restaurant
                           , CartSerializer
                           )
 
-from .permissions import ( IsAdminOrReadOnly, IsOwnerOrReadOnly, IsRestaurantOwnerOrReadOnly , CartAlreadyExist,
+from .permissions import ( IsAdminOrReadOnly, IsOwnerOrReadOnly, IsRestaurantOwnerOrReadOnly , AlreadyExist
                           )
 
 # Create your views here.
@@ -61,8 +61,17 @@ class RestaurantViewSet(ModelViewSet):
         'is_featured', 'rating', 'cuisine__name','owner'
     ]
 
+    def get_permissions(self):
+        permissions = super().get_permissions()
+        # Add the custom permission 
+        permissions.append(AlreadyExist(Restaurant))
+        return permissions
+
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
+
+    def get_serializer_context(self):
+        return {'user':self.request.user}
 
 
 class DishViewSet(ModelViewSet):
@@ -93,7 +102,6 @@ class DishViewSet(ModelViewSet):
         restaurant = Restaurant.objects.filter(owner=self.request.user).first()
         serializer.save(restaurant=restaurant)
 
-
     def get_serializer_context(self):
         return {'user':self.request.user}
 
@@ -102,7 +110,12 @@ class CartViewSet(ModelViewSet):
 
     http_method_names = ['get','post','delete']
     serializer_class = CartSerializer
-    permission_classes = [CartAlreadyExist]
+
+    def get_permissions(self):
+        permissions = super().get_permissions()
+        # Add the custom permission
+        permissions.append(AlreadyExist(Cart))
+        return permissions
 
     def get_queryset(self):
         return Cart.objects.select_related('customer').filter(customer=self.request.user)
