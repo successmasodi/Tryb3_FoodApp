@@ -2,9 +2,13 @@ from django.db.models import Count
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Cuisine, FoodCategory, Restaurant, Dish
-from .serializers import CuisineSerializer, FoodCategorySerializer, RestaurantSerializer, DishSerializer
+from .models import Cuisine, FoodCategory, Restaurant, Dish, Cart , CartItem
+from .serializers import ( CuisineSerializer, FoodCategorySerializer, RestaurantSerializer, DishSerializer
+                          , CartSerializer
+                          )
 
+from .permissions import ( IsAdminOrReadOnly, IsOwnerOrReadOnly, CartAlreadyExist,
+                          )
 
 # Create your views here.
 class CuisineViewSet(ModelViewSet):
@@ -13,6 +17,7 @@ class CuisineViewSet(ModelViewSet):
 
     queryset = Cuisine.objects.all()
     serializer_class = CuisineSerializer
+    permission_classes = [IsAdminOrReadOnly]
     filter_backends = [SearchFilter, OrderingFilter]
     search_fields = ['name']
     ordering_fields = ['name', 'restaurant_count']
@@ -24,6 +29,7 @@ class FoodCategoryViewSet(ModelViewSet):
 
     queryset = FoodCategory.objects.all()
     serializer_class = FoodCategorySerializer
+    permission_classes = [IsAdminOrReadOnly]
     filter_backends = [SearchFilter, OrderingFilter]
     search_fields = ['name']
     ordering_fields = ['name', 'dish_count']
@@ -36,22 +42,26 @@ class RestaurantViewSet(ModelViewSet):
     ordered by: 
         '-is_featured', '-rating', 'name
     filter by:
-        'is featured',  'rating', 'cuisine name', 'owner', 'dish_count',
+        'is featured',  'rating', 'cuisine name', 'owner'
 
     dish_count: number of dishes by the restaurant
+
+    permission: Only owner can modify object.
     '''
 
-    queryset = Restaurant.objects.select_related('owner', 'cuisine')\
-        .prefetch_related('dishes')
+    queryset = Restaurant.objects.select_related('owner', 'cuisine').prefetch_related('dishes')
     serializer_class = RestaurantSerializer
+    permission_classes = [IsOwnerOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     search_fields = [
         'name', 'address', 'cuisine__name', 'dishes__name'
     ]
     filterset_fields = [
-        'is_featured', 'rating', 'cuisine__name', 'dish_count',
-        'owner',
+        'is_featured', 'rating', 'cuisine__name','owner'
     ]
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
 
 
 class DishViewSet(ModelViewSet):
@@ -78,3 +88,16 @@ class DishViewSet(ModelViewSet):
         'is_vegetarian', 'is_vegan',
         'is_gluten_free',  'is_available'
     ]
+
+
+class CartViewSet(ModelViewSet):
+
+    http_method_names = ['get','post','delete']
+    serializer_class = CartSerializer
+    permission_classes = [CartAlreadyExist]
+
+    def get_queryset(self):
+        return Cart.objects.select_related('customer').filter(customer=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(customer=self.request.user)

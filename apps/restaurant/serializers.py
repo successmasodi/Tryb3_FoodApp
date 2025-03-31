@@ -1,5 +1,7 @@
 from rest_framework import serializers
-from .models import Cuisine, FoodCategory, Restaurant, Dish
+from .models import (
+    Cuisine, FoodCategory, Restaurant, Dish, Cart, CartItem
+)
 
 
 class CuisineSerializer(serializers.ModelSerializer):
@@ -52,20 +54,19 @@ class SimpleDishSerializer(serializers.ModelSerializer):
 
 class RestaurantSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField(read_only=True)
-    cuisine = SimpleCuisineSerializer(read_only=True)
+    cuisine_type = SimpleCuisineSerializer(source='cuisine',read_only=True)
+    cuisine = serializers.PrimaryKeyRelatedField(queryset=Cuisine.objects.all(), write_only=True)  # For input only    
     menu_count = serializers.IntegerField(source='dish_count', read_only=True)
     menu = SimpleDishSerializer(source='dishes', many=True, read_only=True)
 
     class Meta:
         model = Restaurant
         fields = (
-            'id', 'owner', 'name', 'slug', 'description', 'address',
+            'id', 'owner', 'name', 'slug', 'description', 'address','cuisine_type',
             'cuisine', 'rating', 'delivery_time', 'minimum_order',
-            'image', 'cover_image', 'is_featured', 'menu_count', 'menu', 'created_at', 'date_joined'
+            'image', 'cover_image', 'is_featured', 'menu_count', 'menu','date_joined'
         )
-        read_only_fields = [
-            'id', 'slug', 'rating', 'created_at', 'updated_at', 'owner', 'dishes'
-        ]
+        read_only_fields = [ 'id', 'slug', 'rating', 'owner']
 
 
 class DishSerializer(serializers.ModelSerializer):
@@ -82,3 +83,43 @@ class DishSerializer(serializers.ModelSerializer):
             'image', 'created_at', 'updated_at'
         )
         read_only_fields = ['id', 'restaurant', 'created_at', 'updated_at']
+
+
+class CartSerializer(serializers.ModelSerializer):
+    customer = serializers.StringRelatedField(read_only=True)
+    items = serializers.StringRelatedField(many=True, read_only=True)
+
+    class Meta:
+        model = Cart
+        fields = (
+            'id', 'customer', 'items', 'created_at'
+        )
+        read_only_fields = ['id']
+
+
+
+
+class SimpleCartSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Cart
+        fields = ( 'id', 'created_at')
+        read_only_fields = ['id']
+
+
+
+class CartItemSerializer(serializers.ModelSerializer):
+    cart = SimpleCartSerializer(read_only=True)
+    dish = SimpleDishSerializer(read_only=True)
+    sub_total = serializers.SerializerMethodField()
+    restaurant = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CartItem
+        fields = ('id', 'cart', 'dish', 'quantity','sub_total','restaurant')
+        read_only_fields = ['id', 'cart']
+
+    def get_sub_total(self):
+        return self.sub_total()
+    
+    def get_restaurant(self):
+        return self.restaurant

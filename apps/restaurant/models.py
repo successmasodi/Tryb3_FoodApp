@@ -170,23 +170,24 @@ class Dish(models.Model):
 
 
 class Cart(models.Model):
-
-    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='cart')
+    id = models.UUIDField(primary_key=True, unique=True, default=uuid4)
+    customer = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='cart')
     created_at = models.DateTimeField(auto_now_add=True)
-    update_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Cart #{self.id} - {self.customer.email}"
 
 
 class CartItem(models.Model):
-    id = models.UUIDField(primary_key=True, unique=True, default=uuid4)
     cart = models.ForeignKey(Cart,on_delete=models.CASCADE, related_name='items')
     dish = models.ForeignKey(Dish, on_delete=models.CASCADE,related_name='cart_items')
     quantity = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
 
     def sub_total(self):
         return self.dish.unit_price * self.quantity
+    
+    def restaurant(self):
+        return self.dish.restaurant
 
     class Meta:
         # dish shouldn't belong to a same cart twice instead the quantity should be increased
@@ -250,7 +251,6 @@ class Order(models.Model):
         return f"Order #{self.order_number}"
 
 class OrderItem(models.Model):
-    id = models.UUIDField(primary_key=True, unique=True, default=uuid4)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     dish = models.ForeignKey(Dish, on_delete=models.PROTECT, related_name='order_items')
     restaurant = models.ForeignKey(Restaurant, on_delete=models.PROTECT, related_name='order_items')
@@ -272,3 +272,5 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.dish.name} x {self.quantity}"
+
+
