@@ -52,7 +52,7 @@ class FoodCategory(models.Model):
 
 
 class Restaurant(models.Model):
-    owner = models.ForeignKey(
+    owner = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name='restaurant_owner'
@@ -111,7 +111,7 @@ class Restaurant(models.Model):
 
 class Dish(models.Model):
     #same as menu
-    restaurant = models.OneToOneField(
+    restaurant = models.ForeignKey(
         Restaurant,
         on_delete=models.CASCADE,
         related_name='dishes'
