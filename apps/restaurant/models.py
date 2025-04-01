@@ -146,7 +146,7 @@ class Dish(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.name} - {self.restaurant.name}"
+        return f"{self.name} from {self.restaurant.name} - N{self.unit_price}"
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -161,12 +161,22 @@ class Dish(models.Model):
 
 
 class Cart(models.Model):
-    id = models.UUIDField(primary_key=True, unique=True, default=uuid4)
+    id = models.UUIDField(primary_key=True, unique=True, default=uuid4,editable=False)
     customer = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='cart')
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Cart #{self.id} - {self.customer.email}"
+
+    @property
+    def total(self):
+        return sum(item.sub_total for item in self.items.all())
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['customer']),
+        ]
 
 
 class CartItem(models.Model):
@@ -174,18 +184,27 @@ class CartItem(models.Model):
     dish = models.ForeignKey(Dish, on_delete=models.CASCADE,related_name='cart_items')
     quantity = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
 
-    def sub_total(self):
+    added_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def sub_total(self) -> int:
         return self.dish.unit_price * self.quantity
-    
-    def restaurant(self):
-        return self.dish.restaurant
+
+    @property
+    def restaurant_name(self):
+        return self.dish.restaurant.name
 
     class Meta:
         # dish shouldn't belong to a same cart twice instead the quantity should be increased
         unique_together = ('cart', 'dish')
+        ordering = ['-added_at']
+        indexes = [
+            models.Index(fields=['cart', 'dish']),
+        ]
 
     def __str__(self):
-        return f"Cart item: {self.dish.name} x {self.quantity}"
+        return f"Cart item: {self.dish.name}({self.dish.unit_price}) x {self.quantity}"
     
 
 class Order(models.Model):
@@ -221,7 +240,6 @@ class Order(models.Model):
     def restaurants(self):
         return self.items.values_list('dish__restaurant', flat=True).distinct()
 
-
     @property
     def total(self):
         return sum(item.subtotal for item in self.items.all())
@@ -240,6 +258,7 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order #{self.order_number}"
+
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')

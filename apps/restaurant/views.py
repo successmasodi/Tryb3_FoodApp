@@ -4,7 +4,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Cuisine, FoodCategory, Restaurant, Dish, Cart , CartItem
 from .serializers import ( CuisineSerializer, FoodCategorySerializer, RestaurantSerializer, DishSerializer
-                          , CartSerializer
+                          , CartSerializer, AddCartItemSerializer,UpdateCartItemSerializer, CartItemSerializer
                           )
 
 from .permissions import ( IsAdminOrReadOnly, IsOwnerOrReadOnly, IsRestaurantOwnerOrReadOnly , AlreadyExist
@@ -120,5 +120,27 @@ class CartViewSet(ModelViewSet):
     def get_queryset(self):
         return Cart.objects.select_related('customer').filter(customer=self.request.user)
 
+    def get_serializer_context(self):
+        return {'user':self.request.user}
+
     def perform_create(self, serializer):
         serializer.save(customer=self.request.user)
+
+class CartItemViewset(ModelViewSet):
+
+    # http_method_names = ['post','patch','delete']
+    serializer_class = AddCartItemSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return AddCartItemSerializer
+        if self.request.method == "PATCH":
+            return UpdateCartItemSerializer
+        return CartItemSerializer
+
+    def get_queryset(self):
+        return CartItem.objects.select_related('cart').filter(cart__customer=self.request.user)
+    
+    def get_serializer_context(self):
+        return {'cart_pk':self.kwargs['carts_pk']}
+

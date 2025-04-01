@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.db.models.aggregates import Count
-from .models import Cuisine, Restaurant, Dish, FoodCategory,Cart
+from .models import Cuisine, Restaurant, Dish, FoodCategory,Cart, CartItem
 
 # Register your models here.
 
@@ -72,3 +72,4 @@ class DishAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Cart)
+admin.site.register(CartItem)
