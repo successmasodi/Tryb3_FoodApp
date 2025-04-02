@@ -97,3 +97,7 @@ class CheckOTPSerializer(serializers.Serializer):
 class CheckSignupOTPSerializer(serializers.Serializer):
     otp = serializers.CharField(max_length=6)
     token = serializers.CharField()
+
+
+class EmailSerializer(serializers.Serializer):
+    email = serializers.CharField(max_length=100)

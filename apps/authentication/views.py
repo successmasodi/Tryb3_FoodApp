@@ -10,7 +10,7 @@ from django.contrib.auth.hashers import make_password
 from rest_framework.exceptions import AuthenticationFailed
 from .serializers import (UserSignupSerializer, LoginSerializer, PasswordChangeRequestSerializer, \
                           UserProfileSerializer, ForgotPasswordRequestSerializer, UserSignupSerializerResendOTP,
-                          UserSignupSerializerOTP, ViewUserProfileSerializer)
+                          UserSignupSerializerOTP, ViewUserProfileSerializer,EmailSerializer)
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from .utils import EmailThread
 from rest_framework.permissions import IsAuthenticated
@@ -24,6 +24,11 @@ User = get_user_model()
 class ForgotPasswordViewSet(viewsets.ModelViewSet):
     queryset = ForgotPasswordRequest.objects.all()
     serializer_class = ForgotPasswordRequestSerializer
+
+    def get_serializer_class(self):
+        if self.action == 'request_forgot_password':
+            return EmailSerializer
+        return super().get_serializer_class()
 
     @action(detail=False, methods=['post'], url_path='request-forgot-password')
     def request_forgot_password(self, request):
@@ -66,7 +71,7 @@ class ForgotPasswordViewSet(viewsets.ModelViewSet):
         user = User.objects.filter(email=email).first()
         if not user:
             return Response({"error": "No user found with this email."}, status=status.HTTP_400_BAD_REQUEST)
-        forgot_password_request = ForgotPasswordRequest.objects.filter(user=user).first()
+        forgot_password_request = ForgotPasswordRequest.objects.filter(user=user).last()
         expiration_time = forgot_password_request.created_at + datetime.timedelta(minutes=10)
         if timezone.now() > expiration_time:
             return Response({"error": "The reset link has expired. Please request a new one."}, status=status.HTTP_400_BAD_REQUEST)
