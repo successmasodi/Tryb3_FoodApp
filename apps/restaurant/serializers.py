@@ -1,7 +1,15 @@
 from rest_framework import serializers
 from .models import (
-    Cuisine, FoodCategory, Restaurant, Dish, Cart, CartItem
+    Address, Cuisine, FoodCategory, Restaurant, Dish, Cart, CartItem, PaymentMethod
 )
+
+class AddressSerializer(serializers.ModelSerializer):
+    owner = serializers.StringRelatedField()
+
+    class Meta:
+        model = Address
+        fields = ('id', 'owner', 'street_address','address_type' ,'city', 'state', 'country', 'postal_code', 'is_default' )
+        read_only_fields = ('id','user')
 
 
 class CuisineSerializer(serializers.ModelSerializer):
@@ -61,7 +69,6 @@ class RestaurantSerializer(serializers.ModelSerializer):
 
 
     def validate(self, attrs):
-        
         if Restaurant.objects.only('id').filter(owner=self.context['user']).exists():
             raise serializers.ValidationError('You own a restaurant already.')
         return super().validate(attrs)
@@ -204,4 +211,10 @@ class CartItemSerializer(serializers.ModelSerializer):
     def get_sub_total(self,obj):
         return obj.sub_total
 
+
+class PaymentMethodSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PaymentMethod
+        fields = ('id', 'name', 'type', 'is_active', 'processing_fee')
+        read_only_fields = ['id']
 

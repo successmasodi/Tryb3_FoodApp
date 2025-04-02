@@ -5,8 +5,13 @@ from rest_framework_nested import routers
 
 router = routers.DefaultRouter()
 
-router.register('cuisine_types',views.CuisineViewSet,basename='cuisines')
+router.register('profile/addresses',views.AddressViewSet,basename='addresses')
+
+# only admin
+router.register('payment-methods',views.PaymentMethodViewSet,basename='payment_methods')
+router.register('cuisine-types',views.CuisineViewSet,basename='cuisines')
 router.register('categories',views.FoodCategoryViewSet,basename='categories')
+# only admin end
 router.register('restaurants',views.RestaurantViewSet,basename='Restaurants')
 router.register('dishes',views.DishViewSet,basename='dishes')
 router.register('carts',views.CartViewSet,basename='carts')

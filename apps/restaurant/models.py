@@ -5,6 +5,34 @@ from django.conf import settings
 from uuid import uuid4
 from .managers import (CuisineManager, FoodCategoryManager,RestaurantManager)
 
+class Address(models.Model):
+
+    ADDRESS_TYPES = [
+        ('home', 'Home'),
+        ('work', 'Work'),
+        ('other', 'Other'),
+    ]
+
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='addresses')
+    street_address = models.CharField(max_length=255)
+    address_type = models.CharField(max_length=20, choices=ADDRESS_TYPES,default='home')
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=100)
+    country = models.CharField(max_length=100)
+    postal_code = models.CharField(max_length=20)
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.street_address}, {self.city}, {self.state},({self.postal_code})"
+
+    def save(self, *args, **kwargs):
+        if self.is_default:
+            # Ensure only one default address per user
+            Address.objects.filter(owner=self.owner, is_default=True).update(is_default=False)
+        super().save(*args, **kwargs)
+
 
 class Cuisine(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -205,7 +233,27 @@ class CartItem(models.Model):
 
     def __str__(self):
         return f"Cart item: {self.dish.name}({self.dish.unit_price}) x {self.quantity}"
+
+
+class PaymentMethod(models.Model):
+    PAYMENT_TYPES = [
+        ('card', 'Credit/Debit Card'),
+        ('bank', 'Bank Transfer'),
+        ('cod', 'Cash on Delivery'),
+        ('wallet', 'Digital Wallet')
+    ]
+
+    name = models.CharField(max_length=100)
+    type = models.CharField(max_length=20, choices=PAYMENT_TYPES)
+    is_active = models.BooleanField(default=True)
+    processing_fee = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
     
+    class Meta:
+        ordering = ['is_active','processing_fee']
+        indexes =[ models.Index(fields=['is_active','processing_fee']) ]
+
+    def __str__(self):
+        return f"{self.type - {self.processing_fee}}"
 
 class Order(models.Model):
     STATUS_CHOICES = [
@@ -223,6 +271,26 @@ class Order(models.Model):
     order_number = models.CharField(max_length=20, unique=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
+    subtotal = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(0)]
+    )
+    delivery_fee = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=0
+    )
+    tax = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=0
+    )
+    total = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(0)]
+    )
     delivery_address = models.TextField()
     special_instructions = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -263,9 +331,13 @@ class Order(models.Model):
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     dish = models.ForeignKey(Dish, on_delete=models.PROTECT, related_name='order_items')
-    restaurant = models.ForeignKey(Restaurant, on_delete=models.PROTECT, related_name='order_items')
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.PROTECT, null=True,related_name='order_items')
     quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)]) # this field must be set automatically
     special_requests = models.TextField(blank=True)
+
+    @property
+    def sub_total(self):
+        return self.price * self.quantity
 
     def save(self, *args, **kwargs):
         # Automatically set restaurant from dish if not specified
@@ -282,5 +354,6 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.dish.name} x {self.quantity}"
+
 
 

@@ -2,15 +2,27 @@ from django.db.models import Count
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Cuisine, FoodCategory, Restaurant, Dish, Cart , CartItem
-from .serializers import ( CuisineSerializer, FoodCategorySerializer, RestaurantSerializer, DishSerializer
-                          , CartSerializer, AddCartItemSerializer,UpdateCartItemSerializer, CartItemSerializer
+from .models import Address ,Cuisine, FoodCategory, Restaurant, Dish, Cart , CartItem, PaymentMethod
+from .serializers import ( 
+     AddressSerializer,CuisineSerializer, FoodCategorySerializer, RestaurantSerializer, DishSerializer
+    , CartSerializer, AddCartItemSerializer,UpdateCartItemSerializer, CartItemSerializer,PaymentMethodSerializer
                           )
-
+from rest_framework.permissions import IsAuthenticated
 from .permissions import ( IsAdminOrReadOnly, IsOwnerOrReadOnly, IsRestaurantOwnerOrReadOnly , AlreadyExist
                           )
 
 # Create your views here.
+class AddressViewSet(ModelViewSet):
+    serializer_class = AddressSerializer
+    permission_classes = [ IsAuthenticated ,IsOwnerOrReadOnly]
+
+    def get_queryset(self):
+        return Address.objects.select_related('owner').filter(owner=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+
 class CuisineViewSet(ModelViewSet):
     '''View for cuisine. search by name, ordered by name and 
     restaurant_count: number of restaurant under the cuisine'''
@@ -126,6 +138,7 @@ class CartViewSet(ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(customer=self.request.user)
 
+
 class CartItemViewset(ModelViewSet):
 
     serializer_class = AddCartItemSerializer
@@ -143,3 +156,12 @@ class CartItemViewset(ModelViewSet):
     def get_serializer_context(self):
         return {'cart_pk':self.kwargs['carts_pk']}
 
+class PaymentMethodViewSet(ModelViewSet):
+    '''CRUD payment method by only admin.'''
+
+    queryset = PaymentMethod.objects.filter()
+    serializer_class = PaymentMethodSerializer
+    permission_classes = [IsAdminOrReadOnly]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['type','is_active']
+    ordering_fields =['is_active','processing_fee']
