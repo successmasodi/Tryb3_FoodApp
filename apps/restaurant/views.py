@@ -1,3 +1,175 @@
+<<<<<<< Updated upstream
 from django.shortcuts import render
 
 # Create your views here.
+=======
+from django.db.models import Count
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.filters import SearchFilter, OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
+from .models import Address ,Cuisine, FoodCategory, Restaurant, Dish, Cart , CartItem, PaymentMethod
+from .serializers import ( 
+     AddressSerializer,CuisineSerializer, FoodCategorySerializer, RestaurantSerializer, DishSerializer
+    , CartSerializer, AddCartItemSerializer,UpdateCartItemSerializer, CartItemSerializer,PaymentMethodSerializer
+                          )
+
+from .permissions import ( IsAdminOrReadOnly, IsOwnerOrReadOnly, IsRestaurantOwnerOrReadOnly , AlreadyExist
+                          )
+
+# Create your views here.
+
+
+class AddressViewSet(ModelViewSet):
+    serializer_class = AddressSerializer
+    permission_classes = [IsOwnerOrReadOnly]
+
+    def get_queryset(self):
+        return Address.objects.select_related('user').filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+
+class CuisineViewSet(ModelViewSet):
+    '''View for cuisine. search by name, ordered by name and 
+    restaurant_count: number of restaurant under the cuisine'''
+
+    queryset = Cuisine.objects.all()
+    serializer_class = CuisineSerializer
+    permission_classes = [IsAdminOrReadOnly]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['name']
+    ordering_fields = ['name', 'restaurant_count']
+
+
+class FoodCategoryViewSet(ModelViewSet):
+    '''View for Food category. search by name, ordered by name and 
+    dish_count: number of dishes under the category'''
+
+    queryset = FoodCategory.objects.all()
+    serializer_class = FoodCategorySerializer
+    permission_classes = [IsAdminOrReadOnly]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['name']
+    ordering_fields = ['name', 'dish_count']
+
+
+class RestaurantViewSet(ModelViewSet):
+    '''View for Restaurant.
+    search by:
+        'name', 'address', 'cuisine name', 'dishes name'
+    ordered by: 
+        '-is_featured', '-rating', 'name
+    filter by:
+        'is featured',  'rating', 'cuisine name', 'owner'
+
+    dish_count: number of dishes by the restaurant
+
+    permission: Only owner can modify object.
+    '''
+    # Currently a user can own more than one restaurant. is this okay?
+
+    queryset = Restaurant.objects.select_related('owner', 'cuisine').prefetch_related('dishes')
+    serializer_class = RestaurantSerializer
+    permission_classes = [IsOwnerOrReadOnly]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    search_fields = [
+        'name', 'address', 'cuisine__name', 'dishes__name'
+    ]
+    filterset_fields = [
+        'is_featured', 'rating', 'cuisine__name','owner'
+    ]
+
+    def get_permissions(self):
+        permissions = super().get_permissions()
+        # Add the custom permission 
+        permissions.append(AlreadyExist(Restaurant))
+        return permissions
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+    def get_serializer_context(self):
+        return {'user':self.request.user}
+
+
+class DishViewSet(ModelViewSet):
+    '''View for  Dish. 
+    search by:
+        'name', 'restaurant name', 'category name'
+    ordered by: 
+        'is_featured', 'is_available', 'unit_price', 'name'
+    filter by:
+        'is_featured', 'restaurant', 'category',
+        'is_vegetarian', 'is_vegan',
+        'is_gluten_free',  'is_available'
+    '''
+
+    queryset = Dish.objects.select_related('restaurant', 'restaurant__cuisine'
+    ).prefetch_related('category')
+    serializer_class = DishSerializer
+    permission_classes = [ IsRestaurantOwnerOrReadOnly]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    search_fields = ['name', 'restaurant__name', 'category__name']
+    filterset_fields = [
+        'is_featured', 'restaurant', 'category',
+        'is_vegetarian', 'is_vegan',
+        'is_gluten_free',  'is_available'
+    ]
+
+    def perform_create(self, serializer):
+        restaurant = Restaurant.objects.filter(owner=self.request.user).first()
+        serializer.save(restaurant=restaurant)
+
+    def get_serializer_context(self):
+        return {'user':self.request.user}
+
+
+class CartViewSet(ModelViewSet):
+
+    http_method_names = ['get','post','delete']
+    serializer_class = CartSerializer
+
+    def get_permissions(self):
+        permissions = super().get_permissions()
+        # Add the custom permission
+        permissions.append(AlreadyExist(Cart))
+        return permissions
+
+    def get_queryset(self):
+        return Cart.objects.select_related('customer').filter(customer=self.request.user)
+
+    def get_serializer_context(self):
+        return {'user':self.request.user}
+
+    def perform_create(self, serializer):
+        serializer.save(customer=self.request.user)
+
+
+class CartItemViewset(ModelViewSet):
+
+    serializer_class = AddCartItemSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return AddCartItemSerializer
+        if self.request.method == "PATCH":
+            return UpdateCartItemSerializer
+        return CartItemSerializer
+
+    def get_queryset(self):
+        return CartItem.objects.select_related('cart').filter(cart__customer=self.request.user)
+    
+    def get_serializer_context(self):
+        return {'cart_pk':self.kwargs['carts_pk']}
+
+class PaymentMethodViewSet(ModelViewSet):
+    '''CRUD payment method by only admin.'''
+
+    queryset = PaymentMethod.objects.filter()
+    serializer_class = PaymentMethodSerializer
+    permission_classes = [IsAdminOrReadOnly]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['type','is_active']
+    ordering_fields =['is_active','processing_fee']
+>>>>>>> Stashed changes

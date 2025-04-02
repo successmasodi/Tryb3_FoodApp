@@ -1,8 +1,21 @@
 from django.contrib import admin
+<<<<<<< Updated upstream
 from .models import Cuisine, Restaurant, Dish,FoodCategory
 
 # Register your models here.
 
+=======
+from django.db.models.aggregates import Count
+from .models import Address, Cuisine, Restaurant, Dish, FoodCategory,Cart, CartItem,PaymentMethod, Order, OrderItem
+
+# Register your models here.
+
+
+admin.site.register(Address)
+admin.site.register(PaymentMethod)
+
+
+>>>>>>> Stashed changes
 @admin.register(Cuisine)
 class CuisineAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ['name']}
@@ -60,3 +73,45 @@ class DishAdmin(admin.ModelAdmin):
     @admin.display(ordering='name')
     def display_name(self, dish):
         return dish.name
+<<<<<<< Updated upstream
+=======
+
+
+admin.site.register(Cart)
+admin.site.register(CartItem)
+
+
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+    extra = 0
+    readonly_fields = ('sub_total',)
+    fields = ('dish', 'restaurant', 'quantity', 'sub_total', 'special_requests')
+    autocomplete_fields = ['dish', 'restaurant']
+
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ('order_number', 'customer', 'status', 'payment_status', 'total', 'created_at')
+    list_filter = ('status', 'payment_status', 'created_at')
+    search_fields = ('order_number', 'customer__email')
+    readonly_fields = ('order_number', 'subtotal', 'total', 'created_at', 'updated_at')
+    fieldsets = (
+        (None, {'fields': ('order_number', 'customer', 'status', 'payment_status')
+        }),
+        ('Financials', {
+            'fields': ('subtotal', 'delivery_fee', 'tax', 'total')
+        }),
+        ('Delivery', {
+            'fields': ('delivery_address', 'special_instructions', 'delivered_at')
+        }),
+    )
+    inlines = [OrderItemInline]
+
+@admin.register(OrderItem)
+class OrderItemAdmin(admin.ModelAdmin):
+    list_display = ('order', 'dish', 'quantity', 'sub_total')
+    list_select_related = ('order', 'dish', 'restaurant')
+    search_fields = ('order__order_number', 'dish__name')
+    autocomplete_fields = ['order', 'dish', 'restaurant']
+
+>>>>>>> Stashed changes
