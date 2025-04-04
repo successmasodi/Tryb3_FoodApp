@@ -1,5 +1,6 @@
 from django.db.models import Count
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.generics import ListCreateAPIView
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Address ,Cuisine, FoodCategory, Restaurant, Dish, Cart , CartItem, PaymentMethod
@@ -135,26 +136,41 @@ class CartViewSet(ModelViewSet):
     def get_serializer_context(self):
         return {'user':self.request.user}
 
-    def perform_create(self, serializer):
-        serializer.save(customer=self.request.user)
+
+class AddCartItemsApiVIew(ListCreateAPIView):
+    '''
+    View for adding item to a cart no need to bother about creating a cart.
+    add item to cart and it will create if user has no cart with the restaurant 
+    you want to order dish from. If they have, we check if the item already exist
+    in the restaurant cart returned if yes, we increment the quantity, else we add the new dish.
+    '''
+
+    serializer_class = AddCartItemSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return CartItem.objects.select_related('cart').filter(cart__customer=self.request.user).order_by('updated_at')
+
+    def get_serializer_context(self):
+        return { 'user':self.request.user}
 
 
 class CartItemViewset(ModelViewSet):
 
+    http_method_names = ['get','patch','delete']
     serializer_class = AddCartItemSerializer
 
     def get_serializer_class(self):
-        if self.request.method == "POST":
-            return AddCartItemSerializer
+        # if self.request.method == "POST":
+        #     return AddCartItemSerializer
         if self.request.method == "PATCH":
             return UpdateCartItemSerializer
         return CartItemSerializer
 
-    def get_queryset(self):
-        return CartItem.objects.select_related('cart').filter(cart__customer=self.request.user)
-    
+ 
     def get_serializer_context(self):
-        return {'cart_pk':self.kwargs['carts_pk']}
+        return {'cart_pk': self.kwargs['carts_pk'], 'user':self.request.user}
+
 
 class PaymentMethodViewSet(ModelViewSet):
     '''CRUD payment method by only admin.'''
@@ -164,4 +180,4 @@ class PaymentMethodViewSet(ModelViewSet):
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [SearchFilter, OrderingFilter]
     search_fields = ['type','is_active']
-    ordering_fields =['is_active','processing_fee']
+    ordering_fields =['is_active']

@@ -78,7 +78,7 @@ class FoodCategory(models.Model):
     def __str__(self):
         return self.name
 
-
+ 
 class Restaurant(models.Model):
     owner = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -117,6 +117,7 @@ class Restaurant(models.Model):
         null=True
     )
     is_featured = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
     created_at = models.DateTimeField(auto_now_add=True)
     objects = RestaurantManager()
@@ -188,9 +189,76 @@ class Dish(models.Model):
         super().save(*args, **kwargs)
 
 
+class PaymentMethod(models.Model):
+    PAYMENT_TYPES = [
+        ('card', 'Credit/Debit Card'),
+        ('bank', 'Bank Transfer'),
+        ('cod', 'Cash on Delivery'),
+        ('wallet', 'Digital Wallet')
+    ]
+
+    name = models.CharField(max_length=100)
+    payment_type = models.CharField(max_length=20, choices=PAYMENT_TYPES)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['is_active']
+        indexes =[ models.Index(fields=['is_active',]) ]
+
+    def __str__(self):
+        return f" {self.name} - {self.type}"
+
+
+class DeliveryMethod(models.Model):
+    METHOD_TYPES = [
+        ('home', 'Home Delivery'),
+        ('station', 'Pickup Station'),
+        ('express', 'Express Delivery'),
+        ('scheduled', 'Scheduled Delivery')
+    ]
+
+    name = models.CharField(max_length=100)
+    delivery_type = models.CharField(max_length=20, choices=METHOD_TYPES)
+    description = models.TextField(blank=True)
+    base_fee = models.DecimalField( max_digits=6,decimal_places=2, validators=[MinValueValidator(0)])
+    distance_fee = models.DecimalField(
+        max_digits=6, decimal_places=2,validators=[MinValueValidator(0)],default=0.00,help_text="Per kilometer charge"
+    )
+    min_order_amount = models.DecimalField(max_digits=10,decimal_places=2,validators=[MinValueValidator(0)],default=0.00
+    )
+    is_active = models.BooleanField(default=True)
+
+    # Time Estimates
+    estimated_min_minutes = models.PositiveIntegerField(
+        help_text="Minimum delivery time in minutes"
+    )
+    estimated_max_minutes = models.PositiveIntegerField( help_text="Maximum delivery time in minutes")
+
+    class Meta:
+        ordering = ['base_fee']
+    
+    def __str__(self):
+        return f"{self.name} ({self.get_delivery_type_display()})"
+
+    def calculate_fee(self, distance_km=0, cart_total=0):
+        """Calculate dynamic delivery fee"""
+        fee = self.base_fee + (self.distance_fee * distance_km)
+
+        # Apply minimum order discount
+        if cart_total >= self.min_order_amount:
+            return round(fee, 2)
+            # fee = max(fee - 1.00, 0)  # $1 discount example
+        return None
+
+
 class Cart(models.Model):
     id = models.UUIDField(primary_key=True, unique=True, default=uuid4,editable=False)
-    customer = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='cart')
+    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='cart')
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='cart')
+    delivery_address = models.ForeignKey(Address, on_delete=models.CASCADE, related_name='cart', null=True, blank=True)
+    special_instructions = models.TextField(blank=True)
+    payment_method = models.ForeignKey(PaymentMethod, on_delete=models.SET_NULL, null=True, blank=True, related_name='cart')
+    delivery_method = models.ForeignKey(DeliveryMethod, on_delete=models.SET_NULL, null=True, blank=True, related_name='cart')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -205,6 +273,7 @@ class Cart(models.Model):
         indexes = [
             models.Index(fields=['customer']),
         ]
+        unique_together = ('customer', 'restaurant')
 
 
 class CartItem(models.Model):
@@ -234,26 +303,6 @@ class CartItem(models.Model):
     def __str__(self):
         return f"Cart item: {self.dish.name}({self.dish.unit_price}) x {self.quantity}"
 
-
-class PaymentMethod(models.Model):
-    PAYMENT_TYPES = [
-        ('card', 'Credit/Debit Card'),
-        ('bank', 'Bank Transfer'),
-        ('cod', 'Cash on Delivery'),
-        ('wallet', 'Digital Wallet')
-    ]
-
-    name = models.CharField(max_length=100)
-    type = models.CharField(max_length=20, choices=PAYMENT_TYPES)
-    is_active = models.BooleanField(default=True)
-    processing_fee = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
-    
-    class Meta:
-        ordering = ['is_active','processing_fee']
-        indexes =[ models.Index(fields=['is_active','processing_fee']) ]
-
-    def __str__(self):
-        return f"{self.type - {self.processing_fee}}"
 
 class Order(models.Model):
     STATUS_CHOICES = [

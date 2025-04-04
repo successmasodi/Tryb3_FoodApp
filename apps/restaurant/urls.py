@@ -23,6 +23,9 @@ carts_router.register('items',views.CartItemViewset,basename='cart_items')
 
 
 urlpatterns = [
+    path("carts/add-items/",views.AddCartItemsApiVIew.as_view(),name='cart_add_items'),
+
+
     path("", include(router.urls)),
     path("", include(carts_router.urls)),
 ]

@@ -42,9 +42,9 @@ class FoodCategoryAdmin(admin.ModelAdmin):
 class RestaurantAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ['name']}
     fields = ('owner', 'name', 'slug', 'description', 'address', 'cuisine', 'rating', 'delivery_time',
-              'minimum_order', 'image', 'cover_image', 'is_featured', 'date_joined')
+              'minimum_order', 'image', 'cover_image', 'is_featured','is_active', 'date_joined')
     list_display = ('id', 'name', 'owner', 'cuisine', 'dish_count',
-                    'rating', 'is_featured', 'delivery_time', 'minimum_order')
+                    'rating', 'is_featured','is_active', 'delivery_time', 'minimum_order')
     list_editable = ('name', 'rating', 'is_featured', 'cuisine')
     list_filter = ('cuisine', 'is_featured', 'rating')
     search_fields = ('name', 'address', 'description')

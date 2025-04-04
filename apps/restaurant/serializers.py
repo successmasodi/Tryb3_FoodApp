@@ -125,35 +125,28 @@ class BasicDishSerializer(serializers.ModelSerializer):
 class SimpleCartItemSerializer(serializers.ModelSerializer):
     dish = BasicDishSerializer(read_only=True)
     sub_total = serializers.SerializerMethodField()
-    restaurant = serializers.SerializerMethodField()
 
     class Meta:
         model = CartItem
-        fields = ('id', 'dish', 'quantity','sub_total','restaurant')
+        fields = ('id', 'dish', 'quantity','sub_total',)
         read_only_fields = ['id', ]
 
     def get_sub_total(self,obj):
         return obj.sub_total
+        
 
-    def get_restaurant(self,obj):
-        return obj.restaurant_name
 
 
 class CartSerializer(serializers.ModelSerializer):
     customer = serializers.StringRelatedField(read_only=True)
+    restaurant = serializers.StringRelatedField(read_only=True)
     items = SimpleCartItemSerializer(read_only=True,many=True)
     total = serializers.SerializerMethodField()
-
-    def validate(self, attrs):
-
-        if Cart.objects.filter(customer=self.context['user']).exists():
-            raise serializers.ValidationError("You can't create another cart!")
-        return super().validate(attrs)
 
     class Meta:
         model = Cart
         fields = (
-            'id', 'customer', 'items', 'created_at', 
+            'id', 'customer', 'restaurant','items', 'created_at', 
             'updated_at', 'total'
         )
         read_only_fields = ['id']
@@ -162,33 +155,55 @@ class CartSerializer(serializers.ModelSerializer):
         return obj.total
 
 
+
 class AddCartItemSerializer(serializers.ModelSerializer):
+    '''
+    Add items to cart requires dish selection
+    get the restaurant from the dish, add the customer default address
+    '''
 
     # show only available dish
+    cart = serializers.PrimaryKeyRelatedField(read_only=True)
     dish_id = serializers.PrimaryKeyRelatedField(
         queryset=Dish.objects.filter(is_available=True).order_by('-unit_price'),
         source='dish',
         write_only=True,
     )
+
     dish = SimpleDishSerializer(read_only=True)
+
+    def validate(self, attrs):
+        dish = attrs.get('dish')
+        if not dish and not Restaurant.objects.filter(id=dish.restaurant.id, is_active=True).first():
+            raise serializers.ValidationError("Dish isn't available")
+        return attrs
 
     class Meta:
         model = CartItem
-        fields = ('id', 'dish_id','dish', 'quantity')
+        fields = ('id','cart' ,'dish_id','dish', 'quantity')
         read_only_fields = ('id',)
 
-
     def create(self, validated_data):
-        cart_pk = self.context['cart_pk']
+        user = self.context['user']
         dish = validated_data['dish']
+        restaurant = dish.restaurant 
 
-        cart_item, created = CartItem.objects.get_or_create(cart_id=cart_pk, dish=dish)
+        cart, created = Cart.objects.get_or_create(customer=user, restaurant=restaurant)
 
-        if not created:
-            cart_item.quantity += validated_data['quantity']
-            cart_item.save()
-        return cart_item
-
+        # A cart for the restaurant already exists
+        if not created:  
+            # Check if the item already exists in the cart
+            existing_item = cart.items.filter(dish=dish).first()
+            if existing_item:  # If the item already exists, increment the quantity
+                existing_item.quantity += validated_data['quantity']
+                existing_item.save()
+                return existing_item
+            else:  # If the item does not exist, create a new CartItem for the dish
+                new_cart_item = CartItem.objects.create(cart=cart, **validated_data)
+                return new_cart_item
+        
+        # If no cart exists, create a new one and add the item
+        return CartItem.objects.create(cart=cart, restaurant=restaurant, **validated_data)
 
 class UpdateCartItemSerializer(serializers.ModelSerializer):
     dish = SimpleDishSerializer(read_only=True)
@@ -215,6 +230,5 @@ class CartItemSerializer(serializers.ModelSerializer):
 class PaymentMethodSerializer(serializers.ModelSerializer):
     class Meta:
         model = PaymentMethod
-        fields = ('id', 'name', 'type', 'is_active', 'processing_fee')
+        fields = ('id', 'name', 'payment_type', 'is_active',)
         read_only_fields = ['id']
-
