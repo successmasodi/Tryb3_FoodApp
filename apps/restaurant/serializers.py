@@ -137,32 +137,33 @@ class SimpleCartItemSerializer(serializers.ModelSerializer):
 
 
 class PaymentMethodSerializer(serializers.ModelSerializer):
+    '''for creating pay methods'''
 
     class Meta:
         model = PaymentMethod
-        fields = ('id', 'name', 'payment_type', 'is_active')
+        fields = ('id','payment_type', 'is_active')
         read_only_fields = ['id']
-
 
 class CartSerializer(serializers.ModelSerializer):
     cart_id = serializers.UUIDField(source='id')
     customer = serializers.StringRelatedField(read_only=True)
     restaurant = serializers.StringRelatedField(read_only=True)
     items = SimpleCartItemSerializer(read_only=True,many=True)
-    total = serializers.SerializerMethodField()
-    payment_method = PaymentMethodSerializer()
+    cart_items_total = serializers.SerializerMethodField() #serializers.DecimalField(source='obj.sub_total', max_digits=10, decimal_places=2,read_only=True)
+    payment_method = serializers.SlugRelatedField(
+        queryset=PaymentMethod.objects.filter(is_active=True),
+        slug_field='payment_type')
 
     class Meta:
         model = Cart
         fields = (
             'cart_id', 'customer', 'restaurant','items', 'created_at', 
-            'updated_at','payment_method','special_instructions', 'total'
+            'updated_at','payment_method','special_instructions', 'cart_items_total'
         )
         read_only_fields = ['cart_id']
 
-    def get_total(self, obj):
-        return obj.total
-
+    def get_cart_items_total(self, obj):
+        return obj.sub_total
 
 
 class AddCartItemSerializer(serializers.ModelSerializer):

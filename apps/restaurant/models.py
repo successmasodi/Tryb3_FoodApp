@@ -190,6 +190,9 @@ class Dish(models.Model):
 
 
 class PaymentMethod(models.Model):
+    '''
+    payment types are like categories
+    '''
     PAYMENT_TYPES = [
         ('card', 'Credit/Debit Card'),
         ('bank', 'Bank Transfer'),
@@ -197,8 +200,7 @@ class PaymentMethod(models.Model):
         ('wallet', 'Digital Wallet')
     ]
 
-    name = models.CharField(max_length=100)
-    payment_type = models.CharField(max_length=20, choices=PAYMENT_TYPES)
+    payment_type = models.CharField(max_length=20,unique=True, choices=PAYMENT_TYPES)
     is_active = models.BooleanField(default=True)
 
     class Meta:
@@ -206,7 +208,7 @@ class PaymentMethod(models.Model):
         indexes =[ models.Index(fields=['is_active',]) ]
 
     def __str__(self):
-        return f" {self.name} - {self.payment_type}"
+        return f"{self.payment_type}"
 
 
 class DeliveryMethod(models.Model):
@@ -266,7 +268,7 @@ class Cart(models.Model):
         return f"Cart #{self.id} - {self.customer.email}"
 
     @property
-    def total(self):
+    def sub_total(self):
         return sum(item.sub_total for item in self.items.all())
 
     class Meta:
