@@ -133,23 +133,32 @@ class SimpleCartItemSerializer(serializers.ModelSerializer):
 
     def get_sub_total(self,obj):
         return obj.sub_total
-        
 
+
+
+class PaymentMethodSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = PaymentMethod
+        fields = ('id', 'name', 'payment_type', 'is_active')
+        read_only_fields = ['id']
 
 
 class CartSerializer(serializers.ModelSerializer):
+    cart_id = serializers.UUIDField(source='id')
     customer = serializers.StringRelatedField(read_only=True)
     restaurant = serializers.StringRelatedField(read_only=True)
     items = SimpleCartItemSerializer(read_only=True,many=True)
     total = serializers.SerializerMethodField()
+    payment_method = PaymentMethodSerializer()
 
     class Meta:
         model = Cart
         fields = (
-            'id', 'customer', 'restaurant','items', 'created_at', 
-            'updated_at', 'total'
+            'cart_id', 'customer', 'restaurant','items', 'created_at', 
+            'updated_at','payment_method','special_instructions', 'total'
         )
-        read_only_fields = ['id']
+        read_only_fields = ['cart_id']
 
     def get_total(self, obj):
         return obj.total
@@ -159,7 +168,7 @@ class CartSerializer(serializers.ModelSerializer):
 class AddCartItemSerializer(serializers.ModelSerializer):
     '''
     Add items to cart requires dish selection
-    get the restaurant from the dish, add the customer default address
+    get the restaurant from the dish, customer address by defualt
     '''
 
     # show only available dish
@@ -169,7 +178,6 @@ class AddCartItemSerializer(serializers.ModelSerializer):
         source='dish',
         write_only=True,
     )
-
     dish = SimpleDishSerializer(read_only=True)
 
     def validate(self, attrs):
@@ -186,7 +194,7 @@ class AddCartItemSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = self.context['user']
         dish = validated_data['dish']
-        restaurant = dish.restaurant 
+        restaurant = dish.restaurant
 
         cart, created = Cart.objects.get_or_create(customer=user, restaurant=restaurant)
 
@@ -196,6 +204,7 @@ class AddCartItemSerializer(serializers.ModelSerializer):
             existing_item = cart.items.filter(dish=dish).first()
             if existing_item:  # If the item already exists, increment the quantity
                 existing_item.quantity += validated_data['quantity']
+                # cart.delivery_address = user.addresses.filter(is_default=True).first()
                 existing_item.save()
                 return existing_item
             else:  # If the item does not exist, create a new CartItem for the dish
@@ -225,10 +234,3 @@ class CartItemSerializer(serializers.ModelSerializer):
 
     def get_sub_total(self,obj):
         return obj.sub_total
-
-
-class PaymentMethodSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PaymentMethod
-        fields = ('id', 'name', 'payment_type', 'is_active',)
-        read_only_fields = ['id']

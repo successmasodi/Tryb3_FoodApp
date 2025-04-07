@@ -30,7 +30,7 @@ class Address(models.Model):
     def save(self, *args, **kwargs):
         if self.is_default:
             # Ensure only one default address per user
-            Address.objects.filter(owner=self.owner, is_default=True).update(is_default=False)
+            Address.objects.filter(customer=self.customer, is_default=True).update(is_default=False)
         super().save(*args, **kwargs)
 
 
@@ -206,7 +206,7 @@ class PaymentMethod(models.Model):
         indexes =[ models.Index(fields=['is_active',]) ]
 
     def __str__(self):
-        return f" {self.name} - {self.type}"
+        return f" {self.name} - {self.payment_type}"
 
 
 class DeliveryMethod(models.Model):
@@ -256,9 +256,9 @@ class Cart(models.Model):
     customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='cart')
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='cart')
     delivery_address = models.ForeignKey(Address, on_delete=models.CASCADE, related_name='cart', null=True, blank=True)
-    special_instructions = models.TextField(blank=True)
     payment_method = models.ForeignKey(PaymentMethod, on_delete=models.SET_NULL, null=True, blank=True, related_name='cart')
     delivery_method = models.ForeignKey(DeliveryMethod, on_delete=models.SET_NULL, null=True, blank=True, related_name='cart')
+    special_instructions = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

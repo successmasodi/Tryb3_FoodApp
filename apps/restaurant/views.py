@@ -9,7 +9,8 @@ from .serializers import (
     , CartSerializer, AddCartItemSerializer,UpdateCartItemSerializer, CartItemSerializer,PaymentMethodSerializer
                           )
 from rest_framework.permissions import IsAuthenticated
-from .permissions import ( IsAdminOrReadOnly, IsOwnerOrReadOnly, IsRestaurantOwnerOrReadOnly , AlreadyExist
+from .permissions import ( IsAdminOrReadOnly, IsOwnerOrReadOnly, IsRestaurantOwnerOrReadOnly, IsCustomerOrReadOnly, 
+                          AlreadyExist
                           )
 
 # Create your views here.
@@ -119,16 +120,13 @@ class DishViewSet(ModelViewSet):
         return {'user':self.request.user}
 
 
+
 class CartViewSet(ModelViewSet):
+    '''include the Cart_id in the body to include other instruction,
+    to add/increment item to/in a cart go the the cart/add-items '''
 
-    http_method_names = ['get','post','delete']
     serializer_class = CartSerializer
-
-    def get_permissions(self):
-        permissions = super().get_permissions()
-        # Add the custom permission
-        permissions.append(AlreadyExist(Cart))
-        return permissions
+    permission_classes = [IsCustomerOrReadOnly]
 
     def get_queryset(self):
         return Cart.objects.select_related('customer').filter(customer=self.request.user)
@@ -158,7 +156,7 @@ class AddCartItemsApiVIew(ListCreateAPIView):
 class CartItemViewset(ModelViewSet):
 
     http_method_names = ['get','patch','delete']
-    serializer_class = AddCartItemSerializer
+    serializer_class = CartItemSerializer
 
     def get_serializer_class(self):
         # if self.request.method == "POST":

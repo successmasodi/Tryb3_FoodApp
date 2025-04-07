@@ -24,11 +24,22 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
         if request.method and request.method not in permissions.SAFE_METHODS:
             return bool(obj.owner == request.user)
         return True
+    
+class IsCustomerOrReadOnly(IsOwnerOrReadOnly):
+    """
+    Only customer are allowed to modify their own object.
+    """
+    def has_object_permission(self, request, view, obj):
+        if request.method and request.method not in permissions.SAFE_METHODS:
+            return bool(obj.customer == request.user)
+        return True
 
 
 class IsRestaurantOwnerOrReadOnly(IsOwnerOrReadOnly):
     """
-    Only owner of restaurant that  own the dish can modify it
+    It inherits from the 'IsOwnerOrReadOnly' permission
+    Only owner of restaurant that  own the dish can modify it.
+
     """
     message = "Your restaurant doesn't make this meal."
 
