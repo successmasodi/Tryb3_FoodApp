@@ -1,7 +1,9 @@
 from rest_framework import serializers
 from .models import (
-    Address, Cuisine, FoodCategory, Restaurant, Dish, Cart, CartItem, PaymentMethod
+    Address, Cuisine, FoodCategory, Restaurant, Dish, Cart, 
+    CartItem, PaymentMethod,DeliveryMethod
 )
+from decimal import Decimal
 
 class AddressSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField()
@@ -135,7 +137,6 @@ class SimpleCartItemSerializer(serializers.ModelSerializer):
         return obj.sub_total
 
 
-
 class PaymentMethodSerializer(serializers.ModelSerializer):
     '''for creating pay methods'''
 
@@ -144,32 +145,57 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
         fields = ('id','payment_type', 'is_active')
         read_only_fields = ['id']
 
+class DeliveryMethodSerializer(serializers.ModelSerializer):
+    '''for creating delivery methods'''
+
+    class Meta:
+        model = DeliveryMethod
+        fields = ('id','delivery_type','base_fee' ,'is_active','estimated_min_minutes','estimated_max_minutes')
+        read_only_fields = ['id']
+
+
 class CartSerializer(serializers.ModelSerializer):
+
+    def __init__(self,*args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['address'].queryset = self.context['user'].addresses # Address.objects.filter(user=user)
+
     cart_id = serializers.UUIDField(source='id')
     customer = serializers.StringRelatedField(read_only=True)
     restaurant = serializers.StringRelatedField(read_only=True)
     items = SimpleCartItemSerializer(read_only=True,many=True)
-    cart_items_total = serializers.SerializerMethodField() #serializers.DecimalField(source='obj.sub_total', max_digits=10, decimal_places=2,read_only=True)
+    items_total_price = serializers.SerializerMethodField() #serializers.DecimalField(source='obj.sub_total', max_digits=10, decimal_places=2,read_only=True)
     payment_method = serializers.SlugRelatedField(
         queryset=PaymentMethod.objects.filter(is_active=True),
         slug_field='payment_type')
+    delivery_method = serializers.SlugRelatedField(
+        queryset=DeliveryMethod.objects.filter(is_active=True),
+        slug_field='delivery_type')
+    delivery_fee = serializers.SerializerMethodField()
+    total = serializers.SerializerMethodField()
 
     class Meta:
         model = Cart
         fields = (
             'cart_id', 'customer', 'restaurant','items', 'created_at', 
-            'updated_at','payment_method','special_instructions', 'cart_items_total'
+            'updated_at','payment_method','address','delivery_method','special_instructions', 'items_total_price','delivery_fee','total'
         )
         read_only_fields = ['cart_id']
 
-    def get_cart_items_total(self, obj):
+    def get_items_total_price(self, obj) -> Decimal:
         return obj.sub_total
+
+    def get_delivery_fee(self,obj:Cart) -> Decimal:
+        return Decimal(obj.delivery_method.calculate_fee())
+    
+    def get_total(self,obj):
+        return obj.total
 
 
 class AddCartItemSerializer(serializers.ModelSerializer):
     '''
     Add items to cart requires dish selection
-    get the restaurant from the dish, customer address by defualt
+    get the restaurant from the dish, customer address by default
     '''
 
     # show only available dish
@@ -214,6 +240,7 @@ class AddCartItemSerializer(serializers.ModelSerializer):
         
         # If no cart exists, create a new one and add the item
         return CartItem.objects.create(cart=cart, restaurant=restaurant, **validated_data)
+
 
 class UpdateCartItemSerializer(serializers.ModelSerializer):
     dish = SimpleDishSerializer(read_only=True)

@@ -1,12 +1,17 @@
 from django.contrib import admin
 from django.db.models.aggregates import Count
-from .models import Address, Cuisine, Restaurant, Dish, FoodCategory,Cart, CartItem,PaymentMethod, Order, OrderItem
+from .models import (
+    Address, Cuisine, Restaurant, Dish, FoodCategory, Cart, CartItem, PaymentMethod, Order, OrderItem,
+    DeliveryMethod
+
+    )
 
 # Register your models here.
 
 
 admin.site.register(Address)
 admin.site.register(PaymentMethod)
+admin.site.register(DeliveryMethod)
 
 
 @admin.register(Cuisine)
@@ -42,9 +47,9 @@ class FoodCategoryAdmin(admin.ModelAdmin):
 class RestaurantAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ['name']}
     fields = ('owner', 'name', 'slug', 'description', 'address', 'cuisine', 'rating', 'delivery_time',
-              'minimum_order', 'image', 'cover_image', 'is_featured','is_active', 'date_joined')
+              'minimum_order', 'image', 'cover_image', 'is_featured', 'is_active', 'date_joined')
     list_display = ('id', 'name', 'owner', 'cuisine', 'dish_count',
-                    'rating', 'is_featured','is_active', 'delivery_time', 'minimum_order')
+                    'rating', 'is_featured', 'is_active', 'delivery_time', 'minimum_order')
     list_editable = ('name', 'rating', 'is_featured', 'cuisine')
     list_filter = ('cuisine', 'is_featured', 'rating')
     search_fields = ('name', 'address', 'description')
@@ -63,7 +68,8 @@ class DishAdmin(admin.ModelAdmin):
               'is_vegetarian', 'is_vegan', 'is_gluten_free', 'is_available', 'is_featured', 'image')
     list_display = ('id', 'name', 'restaurant', 'unit_price',
                     'category', 'is_available', 'is_featured')
-    list_editable = ('name', 'unit_price', 'is_available','is_featured', 'category')
+    list_editable = ('name', 'unit_price', 'is_available',
+                     'is_featured', 'category')
     list_filter = ('is_vegetarian', 'is_vegan', 'is_gluten_free',
                    'is_available', 'is_featured', 'category')
     search_fields = ('name', 'description', 'unit_price')
@@ -83,19 +89,22 @@ class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 0
     readonly_fields = ('sub_total',)
-    fields = ('dish', 'restaurant', 'quantity', 'sub_total', 'special_requests')
+    fields = ('dish', 'restaurant', 'quantity',
+              'sub_total', 'special_requests')
     autocomplete_fields = ['dish', 'restaurant']
 
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('order_number', 'customer', 'status', 'payment_status', 'total', 'created_at')
+    list_display = ('order_number', 'customer', 'status',
+                    'payment_status', 'total', 'created_at')
     list_filter = ('status', 'payment_status', 'created_at')
     search_fields = ('order_number', 'customer__email')
-    readonly_fields = ('order_number', 'subtotal', 'total', 'created_at', 'updated_at')
+    readonly_fields = ('order_number', 'subtotal',
+                       'total', 'created_at', 'updated_at')
     fieldsets = (
         (None, {'fields': ('order_number', 'customer', 'status', 'payment_status')
-        }),
+                }),
         ('Financials', {
             'fields': ('subtotal', 'delivery_fee', 'tax', 'total')
         }),
@@ -105,10 +114,10 @@ class OrderAdmin(admin.ModelAdmin):
     )
     inlines = [OrderItemInline]
 
+
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):
     list_display = ('order', 'dish', 'quantity', 'sub_total')
     list_select_related = ('order', 'dish', 'restaurant')
     search_fields = ('order__order_number', 'dish__name')
     autocomplete_fields = ['order', 'dish', 'restaurant']
-

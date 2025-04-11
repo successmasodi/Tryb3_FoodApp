@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone,text
 from django.conf import settings
+from decimal import Decimal
 from uuid import uuid4
 from .managers import (CuisineManager, FoodCategoryManager,RestaurantManager)
 
@@ -25,7 +26,7 @@ class Address(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.street_address}, {self.city}, {self.state},({self.postal_code})"
+        return f"{self.address_type} {self.owner.email} - {self.street_address}, {self.city}, {self.state},({self.postal_code})"
 
     def save(self, *args, **kwargs):
         if self.is_default:
@@ -219,8 +220,7 @@ class DeliveryMethod(models.Model):
         ('scheduled', 'Scheduled Delivery')
     ]
 
-    name = models.CharField(max_length=100)
-    delivery_type = models.CharField(max_length=20, choices=METHOD_TYPES)
+    delivery_type = models.CharField(max_length=20, choices=METHOD_TYPES,unique=True)
     description = models.TextField(blank=True)
     base_fee = models.DecimalField( max_digits=6,decimal_places=2, validators=[MinValueValidator(0)])
     distance_fee = models.DecimalField(
@@ -240,24 +240,25 @@ class DeliveryMethod(models.Model):
         ordering = ['base_fee']
     
     def __str__(self):
-        return f"{self.name} ({self.get_delivery_type_display()})"
+        return f"({self.get_delivery_type_display()} {self.base_fee})"
 
     def calculate_fee(self, distance_km=0, cart_total=0):
         """Calculate dynamic delivery fee"""
         fee = self.base_fee + (self.distance_fee * distance_km)
+        return round(fee, 2)
 
         # Apply minimum order discount
-        if cart_total >= self.min_order_amount:
-            return round(fee, 2)
-            # fee = max(fee - 1.00, 0)  # $1 discount example
-        return None
+        # if cart_total >= self.min_order_amount:
+        #     return round(fee, 2)
+        #     # fee = max(fee - 1.00, 0)  # $1 discount example
+        # return None
 
 
 class Cart(models.Model):
     id = models.UUIDField(primary_key=True, unique=True, default=uuid4,editable=False)
     customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='cart')
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='cart')
-    delivery_address = models.ForeignKey(Address, on_delete=models.CASCADE, related_name='cart', null=True, blank=True)
+    address = models.ForeignKey(Address, on_delete=models.CASCADE, related_name='cart', null=True, blank=True)
     payment_method = models.ForeignKey(PaymentMethod, on_delete=models.SET_NULL, null=True, blank=True, related_name='cart')
     delivery_method = models.ForeignKey(DeliveryMethod, on_delete=models.SET_NULL, null=True, blank=True, related_name='cart')
     special_instructions = models.TextField(blank=True)
@@ -270,6 +271,11 @@ class Cart(models.Model):
     @property
     def sub_total(self):
         return sum(item.sub_total for item in self.items.all())
+
+    @property
+    def total(self):
+        '''get total by adding the base fee and the total price of items in the cart'''
+        return Decimal(self.delivery_method.base_fee + self.sub_total)
 
     class Meta:
         indexes = [
@@ -405,6 +411,3 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.dish.name} x {self.quantity}"
-
-
-

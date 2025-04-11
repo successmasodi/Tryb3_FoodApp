@@ -3,10 +3,13 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.generics import ListCreateAPIView
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Address ,Cuisine, FoodCategory, Restaurant, Dish, Cart , CartItem, PaymentMethod
+from .models import (
+    Address ,Cuisine, FoodCategory, Restaurant, Dish, Cart , CartItem, PaymentMethod, DeliveryMethod
+    )
 from .serializers import ( 
      AddressSerializer,CuisineSerializer, FoodCategorySerializer, RestaurantSerializer, DishSerializer
     , CartSerializer, AddCartItemSerializer,UpdateCartItemSerializer, CartItemSerializer,PaymentMethodSerializer
+    ,DeliveryMethodSerializer
                           )
 from rest_framework.permissions import IsAuthenticated
 from .permissions import ( IsAdminOrReadOnly, IsOwnerOrReadOnly, IsRestaurantOwnerOrReadOnly, IsCustomerOrReadOnly, 
@@ -120,7 +123,6 @@ class DishViewSet(ModelViewSet):
         return {'user':self.request.user}
 
 
-
 class CartViewSet(ModelViewSet):
     '''include the Cart_id in the body to include other instruction,
     to add/increment item to/in a cart go the the cart/add-items '''
@@ -132,7 +134,10 @@ class CartViewSet(ModelViewSet):
         return Cart.objects.select_related('customer').filter(customer=self.request.user)
 
     def get_serializer_context(self):
-        return {'user':self.request.user}
+        '''include user and their owned address in the context.
+        i am checking auth incase user isn't authenticated'''
+        if self.request.user.is_authenticated:
+            return {'user':self.request.user}
 
 
 class AddCartItemsApiVIew(ListCreateAPIView):
@@ -154,7 +159,7 @@ class AddCartItemsApiVIew(ListCreateAPIView):
 
 
 class CartItemViewset(ModelViewSet):
-
+    queryset = CartItem.objects.all()
     http_method_names = ['get','patch','delete']
     serializer_class = CartItemSerializer
 
@@ -172,10 +177,18 @@ class CartItemViewset(ModelViewSet):
 
 class PaymentMethodViewSet(ModelViewSet):
     '''CRUD payment method by only admin.'''
-
-    queryset = PaymentMethod.objects.filter()
+    queryset = PaymentMethod.objects.all()
     serializer_class = PaymentMethodSerializer
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ['type','is_active']
+    search_fields = ['payment_type','is_active']
     ordering_fields =['is_active']
+
+class DeliveryMethodViewSet(ModelViewSet):
+    '''CRUD Delivery method by only admin.'''
+    queryset = DeliveryMethod.objects.all()
+    serializer_class = DeliveryMethodSerializer
+    permission_classes = [IsAdminOrReadOnly]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['delivery_type','is_active','base_fee']
+    ordering_fields =['is_active','base_fee']
