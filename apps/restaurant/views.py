@@ -8,7 +8,7 @@ from .models import (
     )
 from .serializers import ( 
      AddressSerializer,CuisineSerializer, FoodCategorySerializer, RestaurantSerializer, DishSerializer
-    , CartSerializer, AddCartItemSerializer,UpdateCartItemSerializer, CartItemSerializer,PaymentMethodSerializer
+    , CartSerializer, AddCartItemSerializer, PaymentMethodSerializer
     ,DeliveryMethodSerializer
                           )
 from rest_framework.permissions import IsAuthenticated
@@ -158,21 +158,20 @@ class AddCartItemsApiVIew(ListCreateAPIView):
         return { 'user':self.request.user}
 
 
-class CartItemViewset(ModelViewSet):
-    queryset = CartItem.objects.all()
-    http_method_names = ['get','patch','delete']
-    serializer_class = CartItemSerializer
+# class CartItemViewset(ModelViewSet):
+#     queryset = CartItem.objects.all()
+#     http_method_names = ['get','patch','delete']
+#     serializer_class = CartItemSerializer
 
-    def get_serializer_class(self):
-        # if self.request.method == "POST":
-        #     return AddCartItemSerializer
-        if self.request.method == "PATCH":
-            return UpdateCartItemSerializer
-        return CartItemSerializer
+#     def get_serializer_class(self):
+#         # if self.request.method == "POST":
+#         #     return AddCartItemSerializer
+#         if self.request.method == "PATCH":
+#             return UpdateCartItemSerializer
+#         return CartItemSerializer
 
- 
-    def get_serializer_context(self):
-        return {'cart_pk': self.kwargs['carts_pk'], 'user':self.request.user}
+#     def get_serializer_context(self):
+#         return {'cart_pk': self.kwargs['carts_pk'], 'user':self.request.user}
 
 
 class PaymentMethodViewSet(ModelViewSet):
@@ -192,3 +191,4 @@ class DeliveryMethodViewSet(ModelViewSet):
     filter_backends = [SearchFilter, OrderingFilter]
     search_fields = ['delivery_type','is_active','base_fee']
     ordering_fields =['is_active','base_fee']
+

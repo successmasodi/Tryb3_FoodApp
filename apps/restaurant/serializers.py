@@ -158,13 +158,13 @@ class CartSerializer(serializers.ModelSerializer):
 
     def __init__(self,*args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['address'].queryset = self.context['user'].addresses # Address.objects.filter(user=user)
+        self.fields['address'].queryset = self.context['user'].addresses
 
     cart_id = serializers.UUIDField(source='id')
     customer = serializers.StringRelatedField(read_only=True)
     restaurant = serializers.StringRelatedField(read_only=True)
     items = SimpleCartItemSerializer(read_only=True,many=True)
-    items_total_price = serializers.SerializerMethodField() #serializers.DecimalField(source='obj.sub_total', max_digits=10, decimal_places=2,read_only=True)
+    items_total_price = serializers.SerializerMethodField()
     payment_method = serializers.SlugRelatedField(
         queryset=PaymentMethod.objects.filter(is_active=True),
         slug_field='payment_type')
@@ -242,13 +242,7 @@ class AddCartItemSerializer(serializers.ModelSerializer):
         return CartItem.objects.create(cart=cart, restaurant=restaurant, **validated_data)
 
 
-class UpdateCartItemSerializer(serializers.ModelSerializer):
-    dish = SimpleDishSerializer(read_only=True)
 
-    # update quantity in a cart
-    class Meta:
-        model = CartItem
-        fields = ('quantity','dish')
 
 
 class CartItemSerializer(serializers.ModelSerializer):
