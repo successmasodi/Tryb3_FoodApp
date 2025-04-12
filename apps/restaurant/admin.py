@@ -88,10 +88,7 @@ admin.site.register(CartItem)
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 0
-    readonly_fields = ('sub_total',)
-    fields = ('dish', 'restaurant', 'quantity',
-              'sub_total', 'special_requests')
-    autocomplete_fields = ['dish', 'restaurant']
+    fields = ('dish_name', 'unit_price', 'quantity')
 
 
 @admin.register(Order)
@@ -117,7 +114,10 @@ class OrderAdmin(admin.ModelAdmin):
 
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):
-    list_display = ('order', 'dish', 'quantity', 'sub_total')
-    list_select_related = ('order', 'dish', 'restaurant')
-    search_fields = ('order__order_number', 'dish__name')
-    autocomplete_fields = ['order', 'dish', 'restaurant']
+    list_display = ('order', 'dish_name','unit_price' ,'quantity','sub_total')
+    list_select_related = ('order',)
+    readonly_fields = ('unit_price','quantity')
+    search_fields = ('order__order_number', 'dish_name')
+
+    def sub_total(self, obj):
+        return obj.unit_price * obj.quantity

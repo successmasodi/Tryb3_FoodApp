@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     Address, Cuisine, FoodCategory, Restaurant, Dish, Cart, 
-    CartItem, PaymentMethod,DeliveryMethod
+    CartItem, PaymentMethod,DeliveryMethod,Order,OrderItem
 )
 from decimal import Decimal
 
@@ -108,7 +108,7 @@ class DishSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dish
         fields = (
-            'id', 'restaurant', 'name', 'description', 'price',
+            'id', 'restaurant', 'name','image' ,'description', 'price',
             'category', 'food_category','preparation_time', 'is_vegetarian',
             'is_vegan', 'is_gluten_free', 'is_available',
             'image', 'created_at', 'updated_at'
@@ -156,9 +156,10 @@ class DeliveryMethodSerializer(serializers.ModelSerializer):
 
 class CartSerializer(serializers.ModelSerializer):
 
-    def __init__(self,*args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['address'].queryset = self.context['user'].addresses
+        if 'user' in self.context:
+            self.fields['address'].queryset = self.context['user'].addresses.all()
 
     cart_id = serializers.UUIDField(source='id')
     customer = serializers.StringRelatedField(read_only=True)
@@ -177,8 +178,9 @@ class CartSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cart
         fields = (
-            'cart_id', 'customer', 'restaurant','items', 'created_at', 
-            'updated_at','payment_method','address','delivery_method','special_instructions', 'items_total_price','delivery_fee','total'
+            'cart_id', 'customer', 'restaurant','items', 'payment_method','address',
+            'delivery_method','special_instructions', 'items_total_price','delivery_fee','total',
+            'created_at', 'updated_at',
         )
         read_only_fields = ['cart_id']
 
@@ -186,7 +188,9 @@ class CartSerializer(serializers.ModelSerializer):
         return obj.sub_total
 
     def get_delivery_fee(self,obj:Cart) -> Decimal:
-        return Decimal(obj.delivery_method.calculate_fee())
+        if obj.delivery_method:
+            return Decimal(obj.delivery_method.calculate_fee())
+        return Decimal(00.00)
     
     def get_total(self,obj):
         return obj.total
@@ -242,9 +246,6 @@ class AddCartItemSerializer(serializers.ModelSerializer):
         return CartItem.objects.create(cart=cart, restaurant=restaurant, **validated_data)
 
 
-
-
-
 class CartItemSerializer(serializers.ModelSerializer):
     dish = SimpleDishSerializer(read_only=True)
     sub_total = serializers.SerializerMethodField()
@@ -256,3 +257,31 @@ class CartItemSerializer(serializers.ModelSerializer):
 
     def get_sub_total(self,obj):
         return obj.sub_total
+
+
+class SimpleOrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = ('id','dish_name','unit_price', 'quantity',)
+        read_only_fields = fields
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    items = SimpleOrderItemSerializer(many=True)
+    class Meta:
+        model = Order
+        fields = (
+            'id', 'customer', 'restaurant_name','status','payment_status','items', 'payment_method','address',
+            'delivery_method','special_instructions', 'subtotal','delivery_fee','total',
+            'created_at', 'updated_at','delivered_at'
+        )
+        read_only_fields = fields
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = ('id','order' ,'dish_name','unit_price', 'quantity','sub_total')
+        read_only_fields = fields
+
+

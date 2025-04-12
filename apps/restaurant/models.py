@@ -26,7 +26,7 @@ class Address(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.address_type} {self.owner.email} - {self.street_address}, {self.city}, {self.state},({self.postal_code})"
+        return f"{self.address_type} : {self.owner.email} - {self.street_address}, {self.city}, {self.state},({self.postal_code})"
 
     def save(self, *args, **kwargs):
         if self.is_default:
@@ -275,7 +275,9 @@ class Cart(models.Model):
     @property
     def total(self):
         '''get total by adding the base fee and the total price of items in the cart'''
-        return Decimal(self.delivery_method.base_fee + self.sub_total)
+        if self.delivery_method:
+            return Decimal(self.delivery_method.base_fee + self.sub_total)
+        return Decimal(00.00)
 
     class Meta:
         indexes = [
@@ -325,18 +327,21 @@ class Order(models.Model):
     ]
 
     customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='orders')
+    restaurant_name = models.CharField(max_length=255)
     order_number = models.CharField(max_length=20, unique=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
+
     subtotal = models.DecimalField(max_digits=10,decimal_places=2,validators=[MinValueValidator(0)])
     delivery_fee = models.DecimalField(max_digits=6,decimal_places=2,default=0)
-    tax = models.DecimalField(max_digits=6,decimal_places=2,default=0)
     total = models.DecimalField(max_digits=10,decimal_places=2,validators=[MinValueValidator(0)])
+
     payment_method = models.CharField(max_length=20)
-    delivery_methods = models.CharField(max_length=20)
-    delivery_address = models.TextField()
+    delivery_method = models.CharField(max_length=20)
+    address = models.TextField()
     special_instructions = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    
+    created_at = models.DateField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     delivered_at = models.DateTimeField(null=True, blank=True)
 
@@ -346,14 +351,6 @@ class Order(models.Model):
             models.Index(fields=['order_number']),
             models.Index(fields=['status', 'payment_status']),
         ]
-
-    @property
-    def restaurants(self):
-        return self.items.values_list('dish__restaurant', flat=True).distinct()
-
-    @property
-    def total(self):
-        return sum(item.subtotal for item in self.items.all())
 
     def save(self, *args, **kwargs):
         if not self.order_number:
@@ -371,29 +368,16 @@ class Order(models.Model):
         return f"Order #{self.order_number}"
 
 
+
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
-    dish = models.ForeignKey(Dish, on_delete=models.PROTECT, related_name='order_items')
-    restaurant = models.ForeignKey(Restaurant, on_delete=models.PROTECT, null=True,related_name='order_items')
-    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)]) # this field must be set automatically
-    special_requests = models.TextField(blank=True)
-
-    @property
-    def sub_total(self):
-        return self.price * self.quantity
-
-    def save(self, *args, **kwargs):
-        # Automatically set restaurant from dish if not specified
-        if not self.restaurant_id:
-            self.restaurant = self.dish.restaurant
-        super().save(*args, **kwargs)
-
-    @property
-    def subtotal(self):
-        return self.dish.unit_price * self.quantity
-
-    class Meta:
-        unique_together = ('order', 'dish')
+    dish_name = models.CharField(max_length=255)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
 
     def __str__(self):
-        return f"{self.dish.name} x {self.quantity}"
+        return f"{self.dish_name} x {self.quantity}"
+    
+    def sub_total(self):
+        return Decimal(self.unit_price * self.quantity)
+

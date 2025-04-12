@@ -16,6 +16,7 @@ router.register('categories',views.FoodCategoryViewSet,basename='categories')
 router.register('restaurants',views.RestaurantViewSet,basename='Restaurants')
 router.register('dishes',views.DishViewSet,basename='dishes')
 router.register('carts',views.CartViewSet,basename='carts')
+router.register('orders',views.OrderViewSet,basename='orders')
 
 
 ## register cart items
