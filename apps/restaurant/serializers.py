@@ -5,6 +5,7 @@ from .models import (
 )
 from decimal import Decimal
 
+
 class AddressSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField()
 
@@ -268,20 +269,25 @@ class SimpleOrderItemSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     items = SimpleOrderItemSerializer(many=True)
+    customer = serializers.StringRelatedField(read_only=True)
+    delivered_at = serializers.DateTimeField(write_only=True)
+    delivered = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = Order
         fields = (
             'id', 'customer', 'restaurant_name','status','payment_status','items', 'payment_method','address',
             'delivery_method','special_instructions', 'subtotal','delivery_fee','total',
-            'created_at', 'updated_at','delivered_at'
+            'created_at', 'updated_at','delivered_at','delivered'
         )
         read_only_fields = fields
 
+    def get_delivered(self,obj):
+        if obj.delivered_at:
+            return obj.delivered_at.strftime("%Y-%m-%d %H:%M:%S")
+        return 'yet to be delivered'
 
 class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
         fields = ('id','order' ,'dish_name','unit_price', 'quantity','sub_total')
         read_only_fields = fields
-
-

@@ -9,9 +9,15 @@ Supports :
 
 from abc import ABC, abstractmethod
 import random
+import requests
+from rest_framework import status
+from rest_framework.exceptions import ValidationError
+from .models import Cart
+from .utils import get_payment_auth_headers, generate_payment_data
 
-def get_processor(method_type:str):
-    '''pass the payment method.it will select its processor'''
+
+def get_processor(method_type: str):
+    '''pass the payment method. it will select its processor'''
     processors = {
         'card': CardProcessor(),
         'bank': BankTransferProcessor(),
@@ -24,32 +30,52 @@ class BasePaymentProcessor(ABC):
     '''Structure of payment processor every class that inherits this class
     must override the charge function'''
     @abstractmethod
-    def charge(self, amount, order_ref, **kwargs):
+    def charge(self, cart: Cart, **kwargs):
         pass
 
+
 class CardProcessor(BasePaymentProcessor):
-    def charge(self, amount, order_ref, **kwargs):
-        '''Logic for card processing Integration with Stripe/Paystack/etc'''
-        print(f"Payment through card {kwargs['cart'].__dict__}")
-        return random.choice([True,False])
+    def charge(self, cart: Cart, **kwargs):
+        '''Logic for card processing Integration with flutterwave, 
+        get the payment link and send the payment data tot he link'''
+
+        flw_url = "https://api.flutterwave.com/v3/payments"
+        payment_header = get_payment_auth_headers()
+        body = generate_payment_data(cart=cart)
+
+        try:
+            print(f"request f body: {payment_header}")
+            response = requests.post(url=flw_url, headers=payment_header, json=body)
+            print(f"request from flutterwave body: {response.text}")
+
+            if not response.status_code == status.HTTP_200_OK:
+                raise ValidationError(
+                    {'status': 'error', 'message': 'invalid status code'})
+            return response
+
+        except Exception as e:
+            raise ValidationError([{
+                'status': 'error',
+                'message': 'Payment request failed. Please check your internet connection or try again later.',
+                'details': str(e),
+            }]) from e
+
 
 class BankTransferProcessor(BasePaymentProcessor):
-    def charge(self, amount, order_ref, **kwargs):
+    def charge(self, cart: Cart, **kwargs):
         '''Logic for bank transfer processing'''
-        print(f"Payment through Bank Transfer{kwargs['cart'].__dict__}")
-        return random.choice([True,False])
-        
+        # print(f"Payment through Bank Transfer{kwargs['cart'].__dict__}")
+        return random.choice([True, False])
+
 
 class CODProcessor(BasePaymentProcessor):
-    def charge(self, amount, order_ref, **kwargs):
+    def charge(self, cart: Cart, **kwargs):
         '''Logic for Cash on Delivery processing'''
-        print(f"Payment through cash on delivery{kwargs['cart'].__dict__}")
-        return random.choice([True,False])
+        # print(f"Payment through cash on delivery{kwargs['cart'].__dict__}")
+        return random.choice([True, False])
 
 
-
-
-### 3. Token-Based Verification System
+# 3. Token-Based Verification System
 
 # # verification/models.py
 # class Token(models.Model):
@@ -69,4 +95,3 @@ class CODProcessor(BasePaymentProcessor):
 #     def mark_used(self):
 #         self.is_used = True
 #         self.save()
-

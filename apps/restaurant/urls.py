@@ -1,7 +1,6 @@
 from django.urls import path,include
 from . import views
-# from rest_framework import routers
-from rest_framework_nested import routers
+from rest_framework import routers
 
 router = routers.DefaultRouter()
 
@@ -13,15 +12,10 @@ router.register('delivery-methods',views.DeliveryMethodViewSet,basename='deliver
 router.register('cuisine-types',views.CuisineViewSet,basename='cuisines')
 router.register('categories',views.FoodCategoryViewSet,basename='categories')
 # only admin end
-router.register('restaurants',views.RestaurantViewSet,basename='Restaurants')
+router.register('restaurants',views.RestaurantViewSet,basename='restaurants')
 router.register('dishes',views.DishViewSet,basename='dishes')
 router.register('carts',views.CartViewSet,basename='carts')
 router.register('orders',views.OrderViewSet,basename='orders')
-
-
-## register cart items
-# carts_router = routers.NestedDefaultRouter(router,'carts',lookup='carts')
-# carts_router.register('items',views.CartItemViewset,basename='cart_items')
 
 
 urlpatterns = [
@@ -29,5 +23,4 @@ urlpatterns = [
 
 
     path("", include(router.urls)),
-    # path("", include(carts_router.urls)),
 ]

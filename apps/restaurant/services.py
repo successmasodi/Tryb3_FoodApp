@@ -4,23 +4,11 @@
 # orders/services.py
 from django.db import transaction
 from .payment_processing import get_processor
-import secrets
 from .models import Order
-from django.utils import timezone
-from rest_framework_simplejwt.tokens import RefreshToken
-from datetime import timedelta
 from rest_framework.exceptions import ValidationError
 
 
 
-def generate_confirm_token(cart):
-    """
-    Generates a token for payment confirmation.
-    """
-    refresh = RefreshToken.for_user(cart.customer)
-    refresh['cart_id'] = cart.id
-    refresh['exp'] = timezone.now() + timedelta(hours=20)
-    return str(refresh.access_token)
 
 class OrderService:
     @classmethod

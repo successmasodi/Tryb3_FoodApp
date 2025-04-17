@@ -270,14 +270,17 @@ class Cart(models.Model):
 
     @property
     def sub_total(self):
-        return sum(item.sub_total for item in self.items.all())
+        if self.items.exists():
+            return sum(item.sub_total for item in self.items.all())
+        return Decimal(00.00)
 
     @property
     def total(self):
         '''get total by adding the base fee and the total price of items in the cart'''
         if self.delivery_method:
-            return Decimal(self.delivery_method.base_fee + self.sub_total)
+            return Decimal(self.delivery_method.base_fee + self.sub_total) 
         return Decimal(00.00)
+
 
     class Meta:
         indexes = [
@@ -366,7 +369,6 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order #{self.order_number}"
-
 
 
 class OrderItem(models.Model):
