@@ -8,7 +8,6 @@ Supports :
 '''
 
 from abc import ABC, abstractmethod
-import random
 import requests
 from rest_framework import status
 from rest_framework.exceptions import ValidationError

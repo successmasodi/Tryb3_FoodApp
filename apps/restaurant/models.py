@@ -155,8 +155,8 @@ class Dish(models.Model):
     )
     category = models.ForeignKey(
         FoodCategory,
-        on_delete=models.SET_NULL,
-        related_name='dishes', null=True
+        on_delete=models.PROTECT,
+        related_name='dishes'
     )
     preparation_time = models.IntegerField(help_text="Preparation time in minutes")
     is_vegetarian = models.BooleanField(default=False)

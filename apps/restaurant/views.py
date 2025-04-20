@@ -10,6 +10,7 @@ from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from decimal import Decimal
+from rest_framework.permissions import IsAuthenticated
 from .models import (
     Address, Cuisine, FoodCategory, Restaurant, Dish, Cart, CartItem, PaymentMethod, DeliveryMethod,
     Order, OrderItem
@@ -19,7 +20,6 @@ from .serializers import (
      CartSerializer, AddCartItemSerializer, PaymentMethodSerializer, DeliveryMethodSerializer,
     OrderSerializer, OrderItemSerializer
     )
-from rest_framework.permissions import IsAuthenticated
 from .permissions import (IsAdminOrReadOnly, IsOwnerOrReadOnly, IsRestaurantOwnerOrReadOnly, IsCustomerOrReadOnly,
                            AlreadyExist
                            )
@@ -116,8 +116,8 @@ class DishViewSet(ModelViewSet):
         'is_gluten_free',  'is_available'
     '''
 
-    queryset = Dish.objects.select_related('restaurant', 'restaurant__cuisine'
-                                           ).prefetch_related('category')
+    queryset = Dish.objects.select_related('restaurant__cuisine'
+                                           ).prefetch_related('restaurant', 'category')
     serializer_class = DishSerializer
     # permission_classes = [ IsRestaurantOwnerOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter]
