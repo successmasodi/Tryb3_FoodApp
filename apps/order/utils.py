@@ -18,8 +18,6 @@ def decrypt_token(token):
     try:
         payload = jwt.decode(token, SECRET, algorithms=['HS256'])
         return {'status': 'success', 'data': payload}
-    except jwt.ExpiredSignatureError:
-        return {'status': 'error', 'message': 'Token Expired'}
     except jwt.InvalidTokenError:
         return {'status': 'error', 'message': 'Invalid Token'}
 

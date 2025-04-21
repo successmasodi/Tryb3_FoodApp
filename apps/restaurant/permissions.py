@@ -1,5 +1,5 @@
 from rest_framework import permissions
-from .models import Cart
+
 
 class IsAdminOrReadOnly(permissions.BasePermission):
 
@@ -94,22 +94,9 @@ class AlreadyExist(permissions.BasePermission):
                     self.message = self.get_message()
                     return False
 
-            # Check if the model has 'customer' attribute (for Cart)
+            # Check if the model has 'customer' attribute
             if hasattr(self.model, 'customer'):
                 if self.model.objects.filter(customer=request.user).exists():
                     self.message = self.get_message()
                     return False
         return True
-
-class CartAlreadyExist(permissions.BasePermission):
-    '''
-    Restrict a user from creating their second cart. A user can have only one cart
-    '''
-
-    message = 'You already own a cart and can\'t own more than 1 cart'
-
-    def has_permission(self, request, view):
-        if request.method and request.method == 'POST':
-            if Cart.objects.only('id').filter(customer=request.user).exists():
-                return False
-        return super().has_permission(request, view)

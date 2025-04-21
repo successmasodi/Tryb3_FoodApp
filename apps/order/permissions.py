@@ -1,0 +1,25 @@
+from rest_framework import permissions
+
+
+class IsAdminOrReadOnly(permissions.BasePermission):
+
+    message = 'Only staff are allowed to modify'
+
+    def has_permission(self, request, view):
+        if request.method and request.method not in permissions.SAFE_METHODS:
+            return request.user.is_staff
+        return True
+
+
+class IsOwnerOrReadOnly(permissions.BasePermission):
+    """
+    An authenticated user is allowed to create while a user is allowed to modify their own object ...
+    """
+    message = "Not allowed for non-owner"
+    def has_permission(self, request, view):
+        if request.method and request.method not in permissions.SAFE_METHODS:
+            return bool(request.user and request.user.is_authenticated)
+        return True
+
+    def has_object_permission(self, request,view, obj):
+        return bool(obj.customer == request.user)

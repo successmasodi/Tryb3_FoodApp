@@ -43,13 +43,11 @@ class CardProcessor(BasePaymentProcessor):
         body = generate_payment_data(cart=cart)
 
         try:
-            print(f"request f body: {payment_header}")
             response = requests.post(url=flw_url, headers=payment_header, json=body)
-            print(f"request from flutterwave body: {response.text}")
+            # print(f"request from flutterwave body: {response.text}")
 
             if not response.status_code == status.HTTP_200_OK:
-                raise ValidationError(
-                    {'status': 'error', 'message': 'invalid status code'})
+                raise ValidationError({'status': 'error', 'message': 'invalid status code'})
             return response
 
         except Exception as e:
@@ -60,18 +58,11 @@ class CardProcessor(BasePaymentProcessor):
             }]) from e
 
 
-class BankTransferProcessor(BasePaymentProcessor):
-    def charge(self, cart: Cart, **kwargs):
-        '''Logic for bank transfer processing'''
-        # print(f"Payment through Bank Transfer{kwargs['cart'].__dict__}")
-        return random.choice([True, False])
-
-
 class CODProcessor(BasePaymentProcessor):
     def charge(self, cart: Cart, **kwargs):
         '''Logic for Cash on Delivery processing'''
         # print(f"Payment through cash on delivery{kwargs['cart'].__dict__}")
-        return random.choice([True, False])
+        pass
 
 
 # 3. Token-Based Verification System
