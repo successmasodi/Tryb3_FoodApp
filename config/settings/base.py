@@ -142,6 +142,7 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=2),
 }
+
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
         "Auth Token eg [Bearer (JWT) ]": {
@@ -151,6 +152,7 @@ SWAGGER_SETTINGS = {
         }
     }
 }
+
 JAZZMIN_SETTINGS = {
     "site_title": "Tryb3 Food App",
     "site_header": "Food App",

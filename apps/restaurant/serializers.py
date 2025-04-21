@@ -4,6 +4,7 @@ from .models import (
 )
 
 
+
 class AddressSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField()
 
@@ -48,11 +49,11 @@ class SimpleRestaurantSerializer(serializers.ModelSerializer):
 
 
 class SimpleDishSerializer(serializers.ModelSerializer):
-    price = serializers.DecimalField(
-        source='unit_price', max_digits=10, decimal_places=2)
+    price = serializers.DecimalField(source='unit_price', max_digits=10, decimal_places=2)
 
     class Meta:
         model = Dish
+        ref_name = 'MenuSerializer'
         fields = ('id', 'name', 'price', 'category', 'image')
         read_only_fields = ('id',)
 
@@ -62,12 +63,16 @@ class RestaurantSerializer(serializers.ModelSerializer):
     cuisine_type = SimpleCuisineSerializer(source='cuisine', read_only=True)
     cuisine = serializers.PrimaryKeyRelatedField(
         queryset=Cuisine.objects.all(), write_only=True)
+    menu_count = serializers.SerializerMethodField()
     menu = SimpleDishSerializer(source='dishes', many=True, read_only=True)
 
     def validate(self, attrs):
         if Restaurant.objects.only('id').filter(owner=self.context['user']).exists():
             raise serializers.ValidationError('You own a restaurant already.')
         return super().validate(attrs)
+    
+    def get_menu_count(self,obj):
+        return obj.menu_count
 
     class Meta:
         model = Restaurant

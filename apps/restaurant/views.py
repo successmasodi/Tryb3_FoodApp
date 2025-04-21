@@ -2,15 +2,19 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated
+from django.utils.decorators import method_decorator
+from apps.restaurant.documentation.restaurant.schemas import (
+    cuisine_docs
+)
 from .models import (
     Address, Cuisine, FoodCategory, Restaurant, Dish
 )
 from .serializers import (
     AddressSerializer, CuisineSerializer, FoodCategorySerializer, RestaurantSerializer, DishSerializer
 )
-from .permissions import (IsAdminOrReadOnly, IsOwnerOrReadOnly, IsRestaurantOwnerOrReadOnly,
-                          AlreadyExist
-                          )
+from .permissions import (
+    IsAdminOrReadOnly, IsOwnerOrReadOnly,AlreadyExist
+    )
 
 
 class AddressViewSet(ModelViewSet):
@@ -34,6 +38,9 @@ class CuisineViewSet(ModelViewSet):
     filter_backends = [SearchFilter, OrderingFilter]
     search_fields = ['name']
     ordering_fields = ['name', 'restaurant_count']
+
+for method_name, decorator_func in cuisine_docs.items():
+    CuisineViewSet = method_decorator(decorator_func, name=method_name)(CuisineViewSet)
 
 
 class FoodCategoryViewSet(ModelViewSet):
@@ -61,23 +68,15 @@ class RestaurantViewSet(ModelViewSet):
 
     permission: Only owner can modify object.
     '''
-    # Currently a user can own more than one restaurant. is this okay?
-
-    queryset = Restaurant.objects.select_related(
-        'owner', 'cuisine').prefetch_related('dishes')
+    queryset = Restaurant.objects.select_related('owner', 'cuisine').prefetch_related('dishes')
     serializer_class = RestaurantSerializer
     permission_classes = [IsOwnerOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    search_fields = [
-        'name', 'address', 'cuisine__name', 'dishes__name'
-    ]
-    filterset_fields = [
-        'is_featured', 'rating', 'cuisine__name', 'owner'
-    ]
+    search_fields = ['name', 'address', 'cuisine__name', 'dishes__name']
+    filterset_fields = ['is_featured', 'rating', 'cuisine__name', 'owner']
 
     def get_permissions(self):
         permissions = super().get_permissions()
-        # Add the custom permission
         permissions.append(AlreadyExist(Restaurant))
         return permissions
 
