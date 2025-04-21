@@ -37,11 +37,7 @@ class Cuisine(models.Model):
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=100, unique=True)
     description = models.TextField(blank=True)
-    image = models.ImageField(
-        upload_to='cuisine_images/',
-        blank=True,
-        null=True
-    )
+    image = models.ImageField(upload_to='cuisine_images/', blank=True, null=True)
     objects = CuisineManager()
 
     class Meta:
@@ -79,42 +75,19 @@ class FoodCategory(models.Model):
 
  
 class Restaurant(models.Model):
-    owner = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.PROTECT,
-        related_name='restaurant_owner'
-    )
+    owner = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='restaurant_owner')
     name = models.CharField(max_length=255, unique=True, help_text='name of your restaurant must be unique to your business.')
     slug = models.SlugField(max_length=255, unique=True)
     description = models.TextField(blank=True)
     address = models.TextField()
-    cuisine = models.ForeignKey(
-        Cuisine,
-        on_delete=models.PROTECT,
-        related_name='restaurants'
-    )
+    cuisine = models.ForeignKey(Cuisine, on_delete=models.PROTECT, related_name='restaurants')
     rating = models.DecimalField(
-        max_digits=3,
-        decimal_places=1,
-        default=0.0,
-        validators=[MinValueValidator(0.0), MaxValueValidator(5.0)]
+        max_digits=3, decimal_places=1, default=0.0, validators=[MinValueValidator(0.0), MaxValueValidator(5.0)]
     )
-    delivery_time = models.CharField(max_length=100,
-        help_text="Average delivery time in minutes"
-    )
-    minimum_order = models.IntegerField(
-        default=1
-    )
-    image = models.ImageField(
-        upload_to='restaurant_images/',
-        blank=True,
-        null=True
-    )
-    cover_image = models.ImageField(
-        upload_to='restaurant_cover_images/',
-        blank=True,
-        null=True
-    )
+    delivery_time = models.CharField(max_length=100,help_text="Average delivery time in minutes")
+    minimum_order = models.IntegerField(default=1)
+    image = models.ImageField(upload_to='restaurant_images/', blank=True, null=True)
+    cover_image = models.ImageField(upload_to='restaurant_cover_images/', blank=True, null=True)
     is_featured = models.BooleanField(default=False)
     is_active = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
@@ -139,23 +112,12 @@ class Restaurant(models.Model):
 
 class Dish(models.Model):
     #same as menu
-    restaurant = models.ForeignKey(
-        Restaurant,
-        on_delete=models.CASCADE,
-        related_name='dishes'
-    )
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='dishes')
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True)
     description = models.TextField(blank=True)
-    unit_price = models.DecimalField(
-        max_digits=10, decimal_places=2,
-        validators=[MinValueValidator(0.01)]
-    )
-    category = models.ForeignKey(
-        FoodCategory,
-        on_delete=models.PROTECT,
-        related_name='dishes'
-    )
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0.01)])
+    category = models.ForeignKey(FoodCategory, on_delete=models.PROTECT, related_name='dishes')
     preparation_time = models.IntegerField(help_text="Preparation time in minutes")
     is_vegetarian = models.BooleanField(default=False)
     is_vegan = models.BooleanField(default=False)
