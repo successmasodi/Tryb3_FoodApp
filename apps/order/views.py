@@ -1,11 +1,12 @@
 import os
-from django.shortcuts import redirect,HttpResponse
+from django.shortcuts import redirect, HttpResponse
+from django.utils.decorators import method_decorator 
 from dotenv import load_dotenv
 
 from django.db import transaction
 from django.urls import reverse
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.generics import ListCreateAPIView
+from rest_framework.generics import ListCreateAPIView, DestroyAPIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -14,6 +15,11 @@ from rest_framework.decorators import action,api_view
 from rest_framework.exceptions import ValidationError
 
 from apps.order.payment_processing import get_processor
+
+from apps.order.documentation.schemas import ( 
+    add_cart_docs, cart_item_destroy_docs , cart_item_retrieve_docs , order_docs,
+    payment_method_docs
+)
 from .models import PaymentMethod, DeliveryMethod, Cart, CartItem, Order, OrderItem
 from .permissions import IsAdminOrReadOnly, IsOwnerOrReadOnly
 from .serializers import (PaymentMethodSerializer, DeliveryMethodSerializer, CartSerializer,
@@ -89,6 +95,9 @@ class PaymentMethodViewSet(ModelViewSet):
     filter_backends = [SearchFilter, OrderingFilter]
     search_fields = ['payment_type', 'is_active']
     ordering_fields = ['is_active']
+
+for method_name, decorator_func in payment_method_docs.items():
+    PaymentMethodViewSet = method_decorator(name=method_name, decorator=decorator_func)(PaymentMethodViewSet)
 
 
 class DeliveryMethodViewSet(ModelViewSet):
@@ -228,14 +237,47 @@ class AddCartItemsApiVIew(ListCreateAPIView):
     def get_serializer_context(self):
         return { 'user': self.request.user}
 
+for method_name , decorator_func in add_cart_docs.items():
+    AddCartItemsApiVIew = method_decorator(name=method_name, decorator=decorator_func) (AddCartItemsApiVIew)
+
+
+@method_decorator(name='delete', decorator=cart_item_destroy_docs)
+@method_decorator(name='get', decorator=cart_item_retrieve_docs)
+class DeleteCartItemApiView(DestroyAPIView):
+    '''
+    User wants to completely delete a cart item
+    '''
+
+    serializer_class = AddCartItemSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return CartItem.objects.select_related('cart').filter(id=self.kwargs['pk'], cart__customer=self.request.user).order_by('updated_at')
+
+    def get_serializer_context(self):
+        return { 'user': self.request.user}
+
+    def get(self, request, *args, **kwargs):
+        serializer = self.get_serializer(self.get_object())
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class OrderViewSet(ModelViewSet):
-    '''CRUD Order by only admin.'''
+    '''CRUD Order by only admin. After successful checkout order is created and cart is delete.'''
+
+    http_method_names = ['get','options','patch']
     serializer_class = OrderSerializer
-    # permission_classes = [IsCustomerOrReadOnly]
+    permission_classes = [IsAdminOrReadOnly]
     filter_backends = [SearchFilter, OrderingFilter]
     search_fields = ['status', 'payment_status','restaurant_name']
     ordering_fields = ['is_active','total','total']
 
     def get_queryset(self):
-        return Order.objects.select_related('customer')
+        order = Order.objects.select_related('customer')
+        user = self.request.user
+        if user.is_staff:
+            return order
+        return order.filter(customer=user)
+
+for method_name,  decorator_func in order_docs.items():
+    OrderViewSet = method_decorator(name=method_name, decorator=decorator_func)(OrderViewSet)

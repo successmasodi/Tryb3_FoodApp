@@ -4,7 +4,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated
 from django.utils.decorators import method_decorator
 from apps.restaurant.documentation.restaurant.schemas import (
-    cuisine_docs, food_category_docs
+    cuisine_docs, food_category_docs, restaurant_docs, dish_docs,
+    address_docs
 )
 from .models import (
     Address, Cuisine, FoodCategory, Restaurant, Dish
@@ -27,6 +28,8 @@ class AddressViewSet(ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
+for method_name, decorator_func in address_docs.items():
+    AddressViewSet = method_decorator(name=method_name, decorator=decorator_func)(AddressViewSet)
 
 class CuisineViewSet(ModelViewSet):
     '''View for cuisine. search by name, ordered by name and
@@ -71,6 +74,7 @@ class RestaurantViewSet(ModelViewSet):
 
     permission: Only owner can modify object.
     '''
+
     queryset = Restaurant.objects.select_related('owner', 'cuisine').prefetch_related('dishes')
     serializer_class = RestaurantSerializer
     permission_classes = [IsOwnerOrReadOnly]
@@ -88,6 +92,10 @@ class RestaurantViewSet(ModelViewSet):
 
     def get_serializer_context(self):
         return {'user': self.request.user}
+
+
+for method_name, decorator_func in restaurant_docs.items():
+    RestaurantViewSet = method_decorator(decorator_func, name=method_name)(RestaurantViewSet)
 
 
 class DishViewSet(ModelViewSet):
@@ -120,3 +128,6 @@ class DishViewSet(ModelViewSet):
 
     def get_serializer_context(self):
         return {'user': self.request.user}
+
+for method_name, decorator_func in dish_docs.items():
+    DishViewSet = method_decorator(name=method_name, decorator=decorator_func) (DishViewSet)

@@ -15,6 +15,7 @@ router.register('orders', views.OrderViewSet, basename='orders')
 
 urlpatterns = [
     path("carts/add-items/", views.AddCartItemsApiVIew.as_view(), name='cart_add_items'),
+    path("carts/add-items/<int:pk>/", views.DeleteCartItemApiView.as_view(), name='cart_delete_items'),
     path('flutterwave-payment-webhook/', views.webhook, name='flutter-webhook'),
     path("", include(router.urls)),
 ]
