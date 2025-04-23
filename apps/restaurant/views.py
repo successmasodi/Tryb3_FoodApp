@@ -4,7 +4,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated
 from django.utils.decorators import method_decorator
 from apps.restaurant.documentation.restaurant.schemas import (
-    cuisine_docs
+    cuisine_docs, food_category_docs
 )
 from .models import (
     Address, Cuisine, FoodCategory, Restaurant, Dish
@@ -53,6 +53,9 @@ class FoodCategoryViewSet(ModelViewSet):
     filter_backends = [SearchFilter, OrderingFilter]
     search_fields = ['name']
     ordering_fields = ['name', 'menu_count']
+
+for method_name, decorator_func in food_category_docs.items():
+    FoodCategoryViewSet = method_decorator(decorator_func, name=method_name)(FoodCategoryViewSet)
 
 
 class RestaurantViewSet(ModelViewSet):

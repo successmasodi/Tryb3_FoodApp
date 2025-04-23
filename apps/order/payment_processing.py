@@ -19,7 +19,6 @@ def get_processor(method_type: str):
     '''pass the payment method. it will select its processor'''
     processors = {
         'card': CardProcessor(),
-        'bank': BankTransferProcessor(),
         'cod': CODProcessor()
     }
     return processors[method_type]

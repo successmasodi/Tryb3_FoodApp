@@ -27,7 +27,46 @@ load_dotenv()
 @api_view(['POST'])
 # @csrf_exempt
 def webhook(request):
-    '''After successful payment flutterwave send a request here '''
+    '''After successful payment flutterwave send a request here 
+    sample :{
+  "id": 8944267,
+  "txRef": "6c644038-0579-4c4b-b4a7-0d14778747d2",
+  "flwRef": "FLW-MOCK-39b3af2983712aa0666568b064e5be21",
+  "orderRef": "URF_1745417323114_5909535",
+  "paymentPlan": null,
+  "paymentPage": null,
+  "createdAt": "2025-04-23T14:08:43.000Z",
+  "amount": 3100,
+  "charged_amount": 3100,
+  "status": "successful",
+  "IP": "54.75.161.64",
+  "currency": "NGN",
+  "appfee": 43.4,
+  "merchantfee": 0,
+  "merchantbearsfee": 1,
+  "charge_type": "normal",
+  "customer": {
+    "id": 3004322,
+    "phone": "9090",
+    "fullName": "Anonymous customer",
+    "customertoken": null,
+    "email": "oretammy@gmail.com",
+    "createdAt": "2025-04-23T14:08:43.000Z",
+    "updatedAt": "2025-04-23T14:08:43.000Z",
+    "deletedAt": null,
+    "AccountId": 2599090
+  },
+  "entity": {
+    "card6": "553188",
+    "card_last4": "2950",
+    "card_country_iso": "NG",
+    "createdAt": "2020-04-24T15:19:22.000Z"
+  },
+  "event.type": "CARD_TRANSACTION"
+}
+    
+
+    '''
     secret_hash = os.getenv("FLW_SECRET_HASH")
     signature = request.headers.get("verifi-hash")
     if signature == None or (signature != secret_hash):
@@ -115,7 +154,7 @@ class CartViewSet(ModelViewSet):
                 if raw_text['status']=='success' and raw_text['data']['total']==str(cart.total):
                     order = self.create_order_with_item_from_cart(cart=cart)
 
-                    cart.delete()
+                    # cart.delete()
                     return Response(
                         {'status': 'success', 'message': 'payment successful. Check your order',
                             'link_to_order': request.build_absolute_uri(reverse('orders-detail', kwargs={'pk': order.id}))
