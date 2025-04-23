@@ -1,4 +1,7 @@
-from django.shortcuts import redirect
+import os
+from django.shortcuts import redirect,HttpResponse
+from dotenv import load_dotenv
+
 from django.db import transaction
 from django.urls import reverse
 from rest_framework.viewsets import ModelViewSet
@@ -7,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import action
+from rest_framework.decorators import action,api_view
 from rest_framework.exceptions import ValidationError
 
 from apps.order.payment_processing import get_processor
@@ -17,7 +20,26 @@ from .serializers import (PaymentMethodSerializer, DeliveryMethodSerializer, Car
                           AddCartItemSerializer, OrderSerializer
                           )
 from .utils import decrypt_token
+load_dotenv()
 # Create your views here.
+
+
+@api_view(['POST'])
+# @csrf_exempt
+def webhook(request):
+    '''After successful payment flutterwave send a request here '''
+    secret_hash = os.getenv("FLW_SECRET_HASH")
+    signature = request.headers.get("verifi-hash")
+    if signature == None or (signature != secret_hash):
+        # This request isn't from Flutterwave; discard
+        return Response(status=status.HTTP_401_UNAUTHORIZED)
+    payload = request.body
+    print(f'Here is the payment response from flutterwave {payload}')
+    # It's a good idea to log all received events.
+    # log(payload)
+    # Do something (that doesn't take too long) with the payload
+    return HttpResponse(status=200)
+
 
 
 class PaymentMethodViewSet(ModelViewSet):

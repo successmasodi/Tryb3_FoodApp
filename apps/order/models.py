@@ -137,6 +137,8 @@ class Order(models.Model):
     customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='orders')
     restaurant_name = models.CharField(max_length=255)
     order_number = models.CharField(max_length=20, unique=True)
+    tx_ref = models.CharField(max_length=36, unique=True)
+
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
 
