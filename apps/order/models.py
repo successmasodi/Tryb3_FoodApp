@@ -1,7 +1,6 @@
 from decimal import Decimal
 from uuid import uuid4
-from django.db import models, transaction
-from django.db.models import Q
+from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.utils import timezone
@@ -139,7 +138,6 @@ class PaymentRecord(models.Model):
             record.tx_ref =f"{cart.id.hex[:8]}-{uuid4().hex[:8]}-{int(timezone.now().timestamp())}"
             record.save()
         return record
-
 
 
 class Order(models.Model):

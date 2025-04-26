@@ -1,10 +1,7 @@
 import os
-import urllib.parse
-import uuid
 import jwt
 from dotenv import load_dotenv
 
-from .models import Cart
 load_dotenv()
 
 SECRET = os.getenv('FLW_ENCRYPT_KEY')
@@ -12,7 +9,6 @@ SECRET = os.getenv('FLW_ENCRYPT_KEY')
 def encrypt_token(payload):
     token = jwt.encode(payload, SECRET, algorithm='HS256')
     return token
-
 
 def decrypt_token(token):
     try:

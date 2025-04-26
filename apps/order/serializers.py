@@ -117,7 +117,7 @@ class AddCartItemSerializer(serializers.ModelSerializer):
         model = CartItem
         fields = ('id', 'cart',  'restaurant', 'dish_id', 'dish', 'quantity')
         read_only_fields = ('id',)
-    
+
     def get_restaurant(self, obj):
         return obj.cart.restaurant.name
 
@@ -138,7 +138,7 @@ class AddCartItemSerializer(serializers.ModelSerializer):
             else:
                 new_cart_item = CartItem.objects.create(cart=cart, **validated_data)
                 return new_cart_item
-        
+
         return CartItem.objects.create(cart=cart, **validated_data)
 
 
@@ -168,4 +168,5 @@ class OrderSerializer(serializers.ModelSerializer):
         if obj.delivered_at:
             return obj.delivered_at.strftime("%Y-%m-%d %H:%M:%S")
         return 'yet to be delivered'
+
 

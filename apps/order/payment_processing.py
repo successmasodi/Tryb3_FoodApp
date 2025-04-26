@@ -50,7 +50,6 @@ class PaymentProcessor:
                 if not response.status_code == status.HTTP_200_OK:
                     raise ValidationError(
                         {'status': 'error', 'message': 'invalid status code.', 'data': str(response)})
-                print('from initialixe payment : flutter {response.text}')
                 return response.json()
 
             except Exception as e:

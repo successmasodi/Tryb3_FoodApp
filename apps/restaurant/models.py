@@ -28,7 +28,6 @@ class Address(models.Model):
 
     def save(self, *args, **kwargs):
         if self.is_default:
-            # Ensure only one default address per user
             Address.objects.filter(customer=self.owner, is_default=True).update(is_default=False)
         super().save(*args, **kwargs)
 

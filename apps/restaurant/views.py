@@ -1,7 +1,8 @@
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.response import Response
+from rest_framework import status
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.permissions import IsAuthenticated
 from django.utils.decorators import method_decorator
 from apps.restaurant.documentation.restaurant.schemas import (
     cuisine_docs, food_category_docs, restaurant_docs, dish_docs,
@@ -14,13 +15,13 @@ from .serializers import (
     AddressSerializer, CuisineSerializer, FoodCategorySerializer, RestaurantSerializer, DishSerializer
     )
 from .permissions import (
-    IsAdminOrReadOnly, IsOwnerOrReadOnly,AlreadyExist
+    IsAdminOrReadOnly, IsOwnerOrReadOnly, AlreadyExist, IsRestaurantOwnerOrReadOnly
     )
 
 
 class AddressViewSet(ModelViewSet):
     serializer_class = AddressSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    permission_classes = [IsOwnerOrReadOnly]
 
     def get_queryset(self):
         return Address.objects.select_related('owner').filter(owner=self.request.user)
@@ -42,6 +43,13 @@ class CuisineViewSet(ModelViewSet):
     search_fields = ['name']
     ordering_fields = ['name', 'restaurant_count']
 
+    def destroy(self, request, *args, **kwargs):
+        cuisine = self.get_object()
+        if cuisine.restaurants.exists():
+            return Response({'status':'error','message':'cuisine is related to one or more objects restaurant. '
+            'Remove this relation before you can delete it'}, status=status.HTTP_400_BAD_REQUEST)
+        return super().destroy(request, *args, **kwargs)
+
 for method_name, decorator_func in cuisine_docs.items():
     CuisineViewSet = method_decorator(decorator_func, name=method_name)(CuisineViewSet)
 
@@ -56,6 +64,13 @@ class FoodCategoryViewSet(ModelViewSet):
     filter_backends = [SearchFilter, OrderingFilter]
     search_fields = ['name']
     ordering_fields = ['name', 'menu_count']
+
+    def destroy(self, request, *args, **kwargs):
+        category = self.get_object()
+        if category.dishes.exists():
+            return Response({'status':'error','message':'category is related to one or more objects dishes. '
+            'Remove this relation before you can delete it.'}, status=status.HTTP_400_BAD_REQUEST)
+        return super().destroy(request, *args, **kwargs)
 
 for method_name, decorator_func in food_category_docs.items():
     FoodCategoryViewSet = method_decorator(decorator_func, name=method_name)(FoodCategoryViewSet)
@@ -113,7 +128,7 @@ class DishViewSet(ModelViewSet):
     queryset = Dish.objects.select_related('restaurant__cuisine'
                                            ).prefetch_related('restaurant', 'category')
     serializer_class = DishSerializer
-    # permission_classes = [ IsRestaurantOwnerOrReadOnly]
+    permission_classes = [ IsRestaurantOwnerOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     search_fields = ['name', 'restaurant__name', 'category__name']
     filterset_fields = [

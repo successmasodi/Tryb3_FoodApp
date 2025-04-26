@@ -146,6 +146,7 @@ cuisine_destroy = swagger_auto_schema(
     operation_description='Endpoint to delete a category by its ID.',
     request_body=CuisineSerializer,
     responses={204: '',
+               400: '{"detail": "you won\'t be able to delete a cuisine that is tied to a restaurant until those restaurant are removed first"}',
                404: '{"detail": "No Cuisine matches the given query."}'
                },
     tags=['Cuisine']
@@ -218,6 +219,7 @@ food_category_destroy = swagger_auto_schema(
     operation_description='Endpoint to delete a category by its ID.',
     request_body=FoodCategorySerializer,
     responses={204: '',
+               400: '{"detail": "you won\'t be able to delete a food category that is tied to a dish until those dishes are removed first or you attach them to a new category"}',
                404: '{"detail": "No Food category matches the given query."}'
                },
     tags=['Food_category']
