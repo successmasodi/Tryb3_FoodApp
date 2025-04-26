@@ -73,3 +73,4 @@ class DishAdmin(admin.ModelAdmin):
     def display_name(self, dish):
         return dish.name
 
+

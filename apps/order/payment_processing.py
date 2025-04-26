@@ -2,85 +2,60 @@
 Payment Processing System :
 Supports : 
         ('card', 'Credit/Debit Card'),
-        ('bank', 'Bank Transfer'),
         ('cod', 'Cash on Delivery'),
-        ('wallet', 'Digital Wallet')
 '''
-
-from abc import ABC, abstractmethod
 import requests
+import urllib.parse
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
-from .models import Cart
-from .utils import get_payment_auth_headers, generate_payment_data
+from .models import Cart, PaymentRecord, PaymentMethod
+from .utils import encrypt_token, get_flutter_header
 
+class PaymentProcessor:
+    def initialize_payment(self, cart: Cart):
+        '''start payment based on chosen payment method '''
+        payment_method_type = cart.payment_method.payment_type
+        cart_id = cart.id
+        payment_record = PaymentRecord.get_or_create_for_cart(cart=cart)
+        token = {'tx_ref':payment_record.tx_ref}
+        redirect_url = f'http:/127.0.0.1:8000/api/v1/carts/{cart_id}/confirm_payment/?token={urllib.parse.quote(encrypt_token(payload=token))}'
 
-def get_processor(method_type: str):
-    '''pass the payment method. it will select its processor'''
-    processors = {
-        'card': CardProcessor(),
-        'cod': CODProcessor()
-    }
-    return processors[method_type]
+        if not PaymentMethod.objects.filter(payment_type=payment_method_type, is_active=True).exists():
+            raise ValidationError('Invalid payment method')
 
+        if payment_method_type.lower() == 'cod':
+            return {'status':'success', 'message':'cod payment', 'data': { 'link': redirect_url}}
 
-class BasePaymentProcessor(ABC):
-    '''Structure of payment processor every class that inherits this class
-    must override the charge function'''
-    @abstractmethod
-    def charge(self, cart: Cart, **kwargs):
-        pass
+        elif payment_method_type.lower() == 'card':
+            flw_url = "https://api.flutterwave.com/v3/payments"
+            header = get_flutter_header()
 
+            body = {
+                "tx_ref": payment_record.tx_ref,
+                "amount": str(cart.total),
+                "currency": "NGN",
+                "redirect_url": redirect_url,
+                'customer': {
+                    "email": cart.customer.email,
+                    "phone_number": cart.customer.phone_number,
+                },
+                "customizations": {
+                    "title": "Tryb3 Food Delivery Payment"
+                }
+            }
 
-class CardProcessor(BasePaymentProcessor):
-    def charge(self, cart: Cart, **kwargs):
-        '''Logic for card processing Integration with flutterwave, 
-        get the payment link and send the payment data tot he link'''
+            try:
+                response = requests.post(url=flw_url, headers=header, json=body)
 
-        flw_url = "https://api.flutterwave.com/v3/payments"
-        payment_header = get_payment_auth_headers()
-        body = generate_payment_data(cart=cart)
+                if not response.status_code == status.HTTP_200_OK:
+                    raise ValidationError(
+                        {'status': 'error', 'message': 'invalid status code.', 'data': str(response)})
+                print('from initialixe payment : flutter {response.text}')
+                return response.json()
 
-        try:
-            response = requests.post(url=flw_url, headers=payment_header, json=body)
-            # print(f"request from flutterwave body: {response.text}")
-
-            if not response.status_code == status.HTTP_200_OK:
-                raise ValidationError({'status': 'error', 'message': 'invalid status code'})
-            return response
-
-        except Exception as e:
-            raise ValidationError([{
-                'status': 'error',
-                'message': 'Payment request failed. Please check your internet connection or try again later.',
-                'details': str(e),
-            }]) from e
-
-
-class CODProcessor(BasePaymentProcessor):
-    def charge(self, cart: Cart, **kwargs):
-        '''Logic for Cash on Delivery processing'''
-        # print(f"Payment through cash on delivery{kwargs['cart'].__dict__}")
-        pass
-
-
-# 3. Token-Based Verification System
-
-# # verification/models.py
-# class Token(models.Model):
-#     order = models.OneToOneField(
-#         'orders.Order',
-#         on_delete=models.CASCADE,
-#         related_name='verification_token'
-#     )
-#     code = models.CharField(max_length=12, unique=True)
-#     created_at = models.DateTimeField(auto_now_add=True)
-#     expires_at = models.DateTimeField()
-#     is_used = models.BooleanField(default=False)
-
-#     def is_valid(self):
-#         return not self.is_used and self.expires_at > timezone.now()
-
-#     def mark_used(self):
-#         self.is_used = True
-#         self.save()
+            except Exception as e:
+                raise ValidationError([{
+                    'status': 'error',
+                    'code': 'PAYMENT_FAILED',
+                    'message': str(e),
+                }]) from e

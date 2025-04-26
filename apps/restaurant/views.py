@@ -6,13 +6,13 @@ from django.utils.decorators import method_decorator
 from apps.restaurant.documentation.restaurant.schemas import (
     cuisine_docs, food_category_docs, restaurant_docs, dish_docs,
     address_docs
-)
+    )
 from .models import (
     Address, Cuisine, FoodCategory, Restaurant, Dish
-)
+    )
 from .serializers import (
     AddressSerializer, CuisineSerializer, FoodCategorySerializer, RestaurantSerializer, DishSerializer
-)
+    )
 from .permissions import (
     IsAdminOrReadOnly, IsOwnerOrReadOnly,AlreadyExist
     )

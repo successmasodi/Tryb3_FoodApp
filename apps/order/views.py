@@ -1,4 +1,5 @@
 import os
+import requests
 from django.shortcuts import redirect, HttpResponse
 from django.utils.decorators import method_decorator 
 from dotenv import load_dotenv
@@ -14,18 +15,18 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action,api_view
 from rest_framework.exceptions import ValidationError
 
-from apps.order.payment_processing import get_processor
+from apps.order.payment_processing import get_processor,PaymentProcessor
 
 from apps.order.documentation.schemas import ( 
     add_cart_docs, cart_item_destroy_docs , cart_item_retrieve_docs , order_docs,
     payment_method_docs
 )
-from .models import PaymentMethod, DeliveryMethod, Cart, CartItem, Order, OrderItem
+from .models import PaymentMethod, DeliveryMethod, Cart, CartItem, PaymentRecord, Order, OrderItem
 from .permissions import IsAdminOrReadOnly, IsOwnerOrReadOnly
 from .serializers import (PaymentMethodSerializer, DeliveryMethodSerializer, CartSerializer,
                           AddCartItemSerializer, OrderSerializer
                           )
-from .utils import decrypt_token
+from .utils import decrypt_token, get_flutter_header
 load_dotenv()
 # Create your views here.
 
@@ -134,44 +135,50 @@ class CartViewSet(ModelViewSet):
         cart = self.get_object()
         try:
             self.validate_cart(cart, self.get_serializer_context())
+            with transaction.atomic():
+                result = PaymentProcessor().initialize_payment(cart)
 
-            processor = get_processor(cart.payment_method.payment_type)
-            response = processor.charge(cart)
-            result = response.json()
-
-            if result['status'] == 'success':
-                # provides link to the payment method on flutterwave and then we get redirected to our redirect url
-                return redirect(result['data']['link'])
+                if result['status'] == 'success':
+                    return Response(result, status=status.HTTP_200_OK) #redirect(result['data']['link'])
         except ValidationError as e:
             return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response(
-                {"error": f"Checkout failed {e}", "retry_url":request.build_absolute_uri(request.get_full_path())},
+                {"error": f"Checkout failed {e}", "retry_url":request.build_absolute_uri(reverse('carts-detail', kwargs={'pk': cart.id}))},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     @action(detail=True, methods=['GET'])
-    def confirm_payment(self, request,pk=None):
-        cart_id = request.query_params.get('c_id')
+    def confirm_payment(self, request, pk=None):
+        cart_id = self.kwargs['pk']
         encrypted_token = request.query_params.get('token')
 
         try:
             with transaction.atomic():
-                raw_text = decrypt_token(token=encrypted_token)
+                token = decrypt_token(token=encrypted_token)
+                tx_ref =token['data']['tx_ref']
+                payment_record = PaymentRecord.objects.get(tx_ref=tx_ref, cart_id=cart_id)
+
+                # use in production
+                # if payment_record.payment_method == 'card':
+                #     flw_verify_url = f"https://api.flutterwave.com/v3/transactions/{tx_ref}/verify"
+                #     response = requests.get(url=flw_verify_url, headers=get_flutter_header())
+                #     print(f'json:{str(response)}')
+
+                #     if not response.json()['status'] == 'success':
+                #         raise ValidationError('payment failed. if you have been charged, contact support else Retry!')
 
                 cart = Cart.objects.get(id=cart_id)
-                if raw_text['status']=='success' and raw_text['data']['total']==str(cart.total):
-                    order = self.create_order_with_item_from_cart(cart=cart)
+                order = self.create_order_with_item_from_cart(cart=cart, transaction_reference=tx_ref)
 
-                    # cart.delete()
-                    return Response(
-                        {'status': 'success', 'message': 'payment successful. Check your order',
-                            'link_to_order': request.build_absolute_uri(reverse('orders-detail', kwargs={'pk': order.id}))
-                        }, status=status.HTTP_200_OK)
-                
+                payment_record.delete()
+                # cart.delete()
                 return Response(
-                    {'status': 'failed', 'message': 'payment failed. Retry!. if you have been charged, contact support'},
-                    status=status.HTTP_400_BAD_REQUEST)
+                    {'status': 'success', 'message': 'checkout successful. check your order',
+                        'details':{'order_number': order.order_number, 'tx_ref':order.tx_ref },
+                        'link_to_order': request.build_absolute_uri(reverse('orders-detail', kwargs={'pk': order.id}))
+                    }, status=status.HTTP_200_OK)
+
         except ValidationError as e:
             return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -192,19 +199,21 @@ class CartViewSet(ModelViewSet):
         if not cart.delivery_method:
             raise ValidationError("Delivery method not selected")
 
-    def create_order_with_item_from_cart(self, cart:Cart):
+    def create_order_with_item_from_cart(self, cart:Cart, transaction_reference):
 
         order = Order()
         order.customer = cart.customer
         order.restaurant_name = cart.restaurant.name
+        order.tx_ref = transaction_reference
         order.status = 'confirmed'
-        order.payment_status = 'paid'
+        order.payment_status = 'paid' if cart.payment_method.payment_type == 'card' else 'pending'
         order.payment_method = cart.payment_method.payment_type
         order.delivery_method = cart.delivery_method.delivery_type
         order.subtotal = cart.sub_total
         order.delivery_fee = cart.delivery_method.base_fee
         order.total = cart.total
-        order.address = cart.address.__str__
+        address = cart.address
+        order.address = f'{address.address_type}: {address.street_address}, {address.city}, {address.state},({address.postal_code} '
         order.special_instructions = cart.special_instructions
 
         order.save()
@@ -263,7 +272,7 @@ class DeleteCartItemApiView(DestroyAPIView):
 
 
 class OrderViewSet(ModelViewSet):
-    '''CRUD Order by only admin. After successful checkout order is created and cart is delete.'''
+    '''Read by all,modification by admin. After successful checkout order is created and cart is delete.'''
 
     http_method_names = ['get','options','patch']
     serializer_class = OrderSerializer

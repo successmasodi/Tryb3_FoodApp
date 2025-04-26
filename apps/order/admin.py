@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import PaymentMethod, DeliveryMethod, Cart, CartItem, Order, OrderItem
+from .models import PaymentMethod, DeliveryMethod, Cart, CartItem, PaymentRecord, Order, OrderItem
 
 
 admin.site.register(PaymentMethod)
@@ -7,6 +7,15 @@ admin.site.register(DeliveryMethod)
 admin.site.register(Cart)
 admin.site.register(CartItem)
 
+
+@admin.register(PaymentRecord)
+class PaymentRecordAdmin(admin.ModelAdmin):
+    list_display = ('truncated_tx_ref', 'cart', 'payment_method')
+    list_filter = ('payment_method',)
+    search_fields = ('tx_ref', 'cart__id')
+
+    def truncated_tx_ref(self, obj):
+        return f"{obj.tx_ref[:15]}..." if obj.tx_ref else None
 
 
 class OrderItemInline(admin.TabularInline):
@@ -38,9 +47,10 @@ class OrderAdmin(admin.ModelAdmin):
 
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):
-    list_display = ('order', 'dish_name','unit_price' ,'quantity','sub_total')
+    list_display = ('order', 'dish_name', 'unit_price',
+                    'quantity', 'sub_total')
     list_select_related = ('order',)
-    readonly_fields = ('unit_price','quantity')
+    readonly_fields = ('unit_price', 'quantity')
     search_fields = ('order__order_number', 'dish_name')
 
     @admin.display(ordering='unit_price')

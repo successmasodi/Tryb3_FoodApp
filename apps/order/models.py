@@ -1,6 +1,7 @@
 from decimal import Decimal
 from uuid import uuid4
-from django.db import models
+from django.db import models, transaction
+from django.db.models import Q
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.utils import timezone
@@ -13,9 +14,7 @@ class PaymentMethod(models.Model):
     '''
     PAYMENT_TYPES = [
         ('card', 'Credit/Debit Card'),
-        ('bank', 'Bank Transfer'),
         ('cod', 'Cash on Delivery'),
-        ('wallet', 'Digital Wallet')
     ]
 
     payment_type = models.CharField(max_length=20,unique=True, choices=PAYMENT_TYPES)
@@ -58,12 +57,6 @@ class DeliveryMethod(models.Model):
         """Calculate dynamic delivery fee"""
         fee = self.base_fee + (self.distance_fee * distance_km)
         return round(fee, 2)
-
-        # Apply minimum order discount
-        # if cart_total >= self.min_order_amount:
-        #     return round(fee, 2)
-        #     # fee = max(fee - 1.00, 0)  # $1 discount example
-        # return None
 
 
 class Cart(models.Model):
@@ -120,6 +113,33 @@ class CartItem(models.Model):
 
     def __str__(self):
         return f"Cart item: {self.dish.name}({self.dish.unit_price}) x {self.quantity}"
+
+
+class PaymentRecord(models.Model):
+    tx_ref = models.CharField(max_length=100, unique=True)
+    cart = models.ForeignKey(Cart, on_delete=models.PROTECT)
+    payment_method = models.CharField(max_length=20)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['cart', 'tx_ref']
+        indexes = [models.Index(fields=['cart', 'tx_ref'])]
+
+    def __str__(self):
+        return f'{self.payment_method} - {self.tx_ref[:8]}...'
+    
+    @classmethod
+    def get_or_create_for_cart(cls, cart):
+        record, created = cls.objects.get_or_create(
+            cart=cart,
+            payment_method=cart.payment_method.payment_type,
+        )
+
+        if created:
+            record.tx_ref =f"{cart.id.hex[:8]}-{uuid4().hex[:8]}-{int(timezone.now().timestamp())}"
+            record.save()
+        return record
+
 
 
 class Order(models.Model):
@@ -189,3 +209,4 @@ class OrderItem(models.Model):
     @property
     def sub_total(self):
         return Decimal(self.unit_price * self.quantity)
+        

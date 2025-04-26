@@ -99,8 +99,6 @@ class AddCartItemSerializer(serializers.ModelSerializer):
     Add items to cart requires dish selection
     get the restaurant from the dish
     '''
-
-    # shows only available dish
     cart = serializers.PrimaryKeyRelatedField(read_only=True)
     dish_id = serializers.PrimaryKeyRelatedField(
         queryset=Dish.objects.filter(is_available=True).order_by('-unit_price'),
@@ -160,7 +158,7 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = (
-            'id', 'customer', 'restaurant_name', 'order_number', 'status', 'payment_status',
+            'id', 'customer', 'restaurant_name', 'order_number', 'tx_ref', 'status', 'payment_status',
             'items', 'payment_method', 'delivery_method', 'address','special_instructions', 
             'subtotal', 'delivery_fee', 'total', 'created_at', 'updated_at','delivered_at','delivered'
         )
