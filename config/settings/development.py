@@ -13,7 +13,8 @@ DATABASES = {
 }
 
 # email
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 EMAIL_USE_SSL = True
 EMAIL_USE_TSL = False
 EMAIL_HOST = 'smtp.gmail.com'

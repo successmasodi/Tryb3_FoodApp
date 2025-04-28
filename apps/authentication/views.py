@@ -484,6 +484,14 @@ class PasswordChangeRequestViewSet(viewsets.ModelViewSet):
 class UserSignupViewSet(viewsets.ViewSet):
     """
     Viewset for handling user signup and OTP verification.
+    for sign up:{
+        "first_name":"Ore",
+        "last_name":"Tammy",
+        "email":"oretammy@gmail.com",
+        "password":"TammyOre1",
+        "phone_number":"9090",
+        "verify_password": "TammyOre1"
+        }
     """
 
     def create(self, request, *args, **kwargs):

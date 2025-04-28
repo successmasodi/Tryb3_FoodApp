@@ -38,12 +38,17 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # third party apps
     'drf_yasg',
-    # 'django_filters',
+    'django_filters',
     'rest_framework',
+    
+    # local apps
     'api',
     'apps.authentication',
     'apps.restaurant',
+    'apps.order',
 ]
 
 
@@ -123,9 +128,8 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-FLW_SEC_KEY = os.getenv("FLW_SEC_KEY")
-
 REST_FRAMEWORK = {
+    'COERCE_DECIMAL_TO_STRING': False,
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -138,6 +142,7 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=2),
 }
+
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
         "Auth Token eg [Bearer (JWT) ]": {
@@ -147,6 +152,7 @@ SWAGGER_SETTINGS = {
         }
     }
 }
+
 JAZZMIN_SETTINGS = {
     "site_title": "Tryb3 Food App",
     "site_header": "Food App",
@@ -158,3 +164,7 @@ JAZZMIN_SETTINGS = {
 JAZZMIN_UI_TWEAKS = {
     "theme": "cyborg",
 }
+
+FLW_PUBLIC_KEY = os.getenv('FLW_PUBLIC_KEY')
+FLW_SECRET_KEY = os.getenv('FLW_SECRET_KEY')
+FLW_ENCRYPT_KEY = os.getenv('FLW_ENCRYPT_KEY')
