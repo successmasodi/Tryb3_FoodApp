@@ -1,11 +1,13 @@
 from django.contrib import admin
 from .models import (
     Address, Cuisine, Restaurant, Dish, FoodCategory,
-    )
+    Cart, CartItem, PaymentMethod, Order, OrderItem
+)
 
-# Register your models here.
 admin.site.register(Address)
-
+admin.site.register(PaymentMethod)
+admin.site.register(Cart)
+admin.site.register(CartItem)
 
 @admin.register(Cuisine)
 class CuisineAdmin(admin.ModelAdmin):
@@ -20,7 +22,6 @@ class CuisineAdmin(admin.ModelAdmin):
     def restaurant_count(self, cuisine):
         return cuisine.restaurant_count
 
-
 @admin.register(FoodCategory)
 class FoodCategoryAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ['name']}
@@ -34,7 +35,6 @@ class FoodCategoryAdmin(admin.ModelAdmin):
     @admin.display(ordering='menu_count')
     def menu_count(self, obj):
         return obj.menu_count
-
 
 @admin.register(Restaurant)
 class RestaurantAdmin(admin.ModelAdmin):
@@ -54,7 +54,6 @@ class RestaurantAdmin(admin.ModelAdmin):
     def menu_count(self, obj):
         return obj.menu_count
 
-
 @admin.register(Dish)
 class DishAdmin(admin.ModelAdmin):
     fields = ('restaurant', 'name', 'description', 'unit_price', 'category', 'preparation_time',
@@ -73,4 +72,33 @@ class DishAdmin(admin.ModelAdmin):
     def display_name(self, dish):
         return dish.name
 
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+    extra = 0
+    readonly_fields = ('sub_total',)
+    fields = ('dish', 'restaurant', 'quantity', 'sub_total', 'special_requests')
+    autocomplete_fields = ['dish', 'restaurant']
 
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ('order_number', 'customer', 'status', 'payment_status', 'total', 'created_at')
+    list_filter = ('status', 'payment_status', 'created_at')
+    search_fields = ('order_number', 'customer__email')
+    readonly_fields = ('order_number', 'subtotal', 'total', 'created_at', 'updated_at')
+    fieldsets = (
+        (None, {'fields': ('order_number', 'customer', 'status', 'payment_status')}),
+        ('Financials', {
+            'fields': ('subtotal', 'delivery_fee', 'tax', 'total')
+        }),
+        ('Delivery', {
+            'fields': ('delivery_address', 'special_instructions', 'delivered_at')
+        }),
+    )
+    inlines = [OrderItemInline]
+
+@admin.register(OrderItem)
+class OrderItemAdmin(admin.ModelAdmin):
+    list_display = ('order', 'dish', 'quantity', 'sub_total')
+    list_select_related = ('order', 'dish', 'restaurant')
+    search_fields = ('order__order_number', 'dish__name')
+    autocomplete_fields = ['order', 'dish', 'restaurant']
