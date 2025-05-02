@@ -1,21 +1,18 @@
-from django.urls import path, include
+from django.urls import path,include
 from . import views
-from rest_framework_nested import routers
+from rest_framework import routers
 
 router = routers.DefaultRouter()
 
-router.register('profile/addresses', views.AddressViewSet, basename='addresses')
-router.register('payment-methods', views.PaymentMethodViewSet, basename='payment_methods')
-router.register('cuisine-types', views.CuisineViewSet, basename='cuisines')
-router.register('categories', views.FoodCategoryViewSet, basename='categories')
-router.register('restaurants', views.RestaurantViewSet, basename='restaurants')
-router.register('dishes', views.DishViewSet, basename='dishes')
-router.register('carts', views.CartViewSet, basename='carts')
+router.register('profile/addresses',views.AddressViewSet,basename='addresses')
 
-carts_router = routers.NestedDefaultRouter(router, 'carts', lookup='carts')
-carts_router.register('items', views.CartItemViewset, basename='cart_items')
+# only admin
+router.register('cuisine-types',views.CuisineViewSet,basename='cuisines')
+router.register('categories',views.FoodCategoryViewSet,basename='categories')
+# only admin end
+router.register('restaurants',views.RestaurantViewSet,basename='restaurants')
+router.register('dishes',views.DishViewSet,basename='dishes')
 
 urlpatterns = [
     path("", include(router.urls)),
-    path("", include(carts_router.urls)),
 ]
