@@ -1,194 +1,75 @@
-from rest_framework import serializers
+from django.contrib import admin
 from .models import (
-    Address, Cuisine, FoodCategory, Restaurant, Dish, Cart, CartItem, PaymentMethod
-)
+    Address, Cuisine, Restaurant, Dish, FoodCategory,
+    )
 
-class AddressSerializer(serializers.ModelSerializer):
-    owner = serializers.StringRelatedField()
+admin.site.register(Address)
 
-    class Meta:
-        model = Address
-        fields = ('id', 'owner', 'street_address', 'address_type',
-                  'city', 'state', 'country', 'postal_code', 'is_default')
-        read_only_fields = ('id', 'user')
 
-class SimpleCuisineSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Cuisine
-        fields = ('id', 'name', 'slug',)
-        read_only_fields = ('id', 'slug')
+@admin.register(Cuisine)
+class CuisineAdmin(admin.ModelAdmin):
+    prepopulated_fields = {'slug': ['name']}
+    fields = ('name', 'slug', 'description', 'image')
+    list_display = ('id', 'name', 'slug', 'restaurant_count', 'description')
+    list_filter = ('name',)
+    search_fields = ('name', 'description')
+    show_facets = admin.ShowFacets.ALWAYS
 
-class CuisineSerializer(serializers.ModelSerializer):
-    restaurant_count = serializers.IntegerField(read_only=True)
+    @admin.display(ordering='restaurant_count')
+    def restaurant_count(self, cuisine):
+        return cuisine.restaurant_count
 
-    class Meta:
-        model = Cuisine
-        fields = ('id', 'name', 'slug', 'description',
-                  'restaurant_count', 'image')
-        read_only_fields = ('id', 'slug')
 
-class FoodCategorySerializer(serializers.ModelSerializer):
-    menu_count = serializers.IntegerField(read_only=True)
+@admin.register(FoodCategory)
+class FoodCategoryAdmin(admin.ModelAdmin):
+    prepopulated_fields = {'slug': ['name']}
+    fields = ('name', 'slug', 'description')
+    list_display = ('id', 'name', 'slug', 'menu_count')
+    list_editable = ('name',)
+    list_filter = ('name',)
+    search_fields = ('name', 'description')
+    show_facets = admin.ShowFacets.ALWAYS
 
-    class Meta:
-        model = FoodCategory
-        fields = ('id', 'name', 'slug', 'menu_count', 'description')
-        read_only_fields = ('id', 'slug')
-
-class SimpleRestaurantSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Restaurant
-        fields = ('id', 'name', 'rating')
-        read_only_fields = ('id', 'rating')
-
-class SimpleDishSerializer(serializers.ModelSerializer):
-    price = serializers.DecimalField(source='unit_price', max_digits=10, decimal_places=2)
-
-    class Meta:
-        model = Dish
-        ref_name = 'MenuSerializer'
-        fields = ('id', 'name', 'price', 'category', 'image')
-        read_only_fields = ('id',)
-
-class RestaurantSerializer(serializers.ModelSerializer):
-    owner = serializers.StringRelatedField(read_only=True)
-    cuisine_type = SimpleCuisineSerializer(source='cuisine', read_only=True)
-    cuisine = serializers.PrimaryKeyRelatedField(
-        queryset=Cuisine.objects.all(), write_only=True)
-    menu_count = serializers.SerializerMethodField()
-    menu = SimpleDishSerializer(source='dishes', many=True, read_only=True)
-
-    def validate(self, attrs):
-        if Restaurant.objects.only('id').filter(owner=self.context['user']).exists():
-            raise serializers.ValidationError('You own a restaurant already.')
-        return super().validate(attrs)
-    
-    def get_menu_count(self, obj):
+    @admin.display(ordering='menu_count')
+    def menu_count(self, obj):
         return obj.menu_count
 
-    class Meta:
-        model = Restaurant
-        fields = (
-            'id', 'owner', 'name', 'slug', 'description', 'address', 'cuisine_type',
-            'cuisine', 'rating', 'delivery_time', 'minimum_order',
-            'image', 'cover_image', 'is_featured', 'menu_count', 'menu', 'date_joined'
-        )
-        read_only_fields = ('id', 'slug', 'rating', 'owner', 'menu_count')
 
-class DishSerializer(serializers.ModelSerializer):
-    restaurant = SimpleRestaurantSerializer(read_only=True)
-    category = FoodCategorySerializer(read_only=True)
-    food_category = serializers.SlugRelatedField(
-        source='category', queryset=FoodCategory.objects.all(),
-        slug_field='name', write_only=True
-    )
-    price = serializers.DecimalField(
-        source='unit_price', max_digits=10, decimal_places=2)
+@admin.register(Restaurant)
+class RestaurantAdmin(admin.ModelAdmin):
+    prepopulated_fields = {'slug': ['name']}
+    fields = ('owner', 'name', 'slug', 'description', 'address', 'cuisine', 'rating', 'delivery_time',
+              'minimum_order', 'image', 'cover_image', 'is_featured', 'is_active', 'date_joined')
+    list_display = ('id', 'name', 'owner', 'cuisine', 'menu_count',
+                    'rating', 'is_featured', 'is_active', 'delivery_time', 'minimum_order')
+    list_editable = ('name', 'rating', 'is_featured', 'cuisine')
+    list_filter = ('cuisine', 'is_featured', 'rating')
+    search_fields = ('name', 'address', 'description')
+    list_select_related = ('cuisine', 'owner')
+    show_facets = admin.ShowFacets.ALWAYS
+    date_hierarchy = 'date_joined'
 
-    def validate(self, attrs):
-        if not Restaurant.objects.filter(owner=self.context['user']).exists():
-            raise serializers.ValidationError('You should own a restaurant before creating a dish.')
-        return attrs
+    @admin.display(ordering='menu_count')
+    def menu_count(self, obj):
+        return obj.menu_count
 
-    class Meta:
-        model = Dish
-        fields = (
-            'id', 'restaurant', 'name', 'image', 'description', 'price',
-            'category', 'food_category', 'preparation_time', 'is_vegetarian',
-            'is_vegan', 'is_gluten_free', 'is_available',
-            'image', 'created_at', 'updated_at'
-        )
-        read_only_fields = ['id', 'restaurant', 'created_at', 'updated_at']
 
-class BasicDishSerializer(serializers.ModelSerializer):
-    price = serializers.DecimalField(source='unit_price', max_digits=10, decimal_places=2)
+@admin.register(Dish)
+class DishAdmin(admin.ModelAdmin):
+    fields = ('restaurant', 'name', 'description', 'unit_price', 'category', 'preparation_time',
+              'is_vegetarian', 'is_vegan', 'is_gluten_free', 'is_available', 'is_featured', 'image')
+    list_display = ('id', 'name', 'restaurant', 'unit_price',
+                    'category', 'is_available', 'is_featured')
+    list_editable = ('name', 'unit_price', 'is_available',
+                     'is_featured', 'category')
+    list_filter = ('is_vegetarian', 'is_vegan', 'is_gluten_free',
+                   'is_available', 'is_featured', 'category')
+    search_fields = ('name', 'description', 'unit_price')
+    list_select_related = ('restaurant', 'category')
+    show_facets = admin.ShowFacets.ALWAYS
 
-    class Meta:
-        model = Dish
-        fields = ('name', 'price')
+    @admin.display(ordering='name')
+    def display_name(self, dish):
+        return dish.name
 
-class SimpleCartItemSerializer(serializers.ModelSerializer):
-    dish = BasicDishSerializer(read_only=True)
-    sub_total = serializers.SerializerMethodField()
-    restaurant = serializers.SerializerMethodField()
 
-    class Meta:
-        model = CartItem
-        fields = ('id', 'dish', 'quantity', 'sub_total', 'restaurant')
-        read_only_fields = ['id']
-
-    def get_sub_total(self, obj):
-        return obj.sub_total
-
-    def get_restaurant(self, obj):
-        return obj.restaurant_name
-
-class CartSerializer(serializers.ModelSerializer):
-    customer = serializers.StringRelatedField(read_only=True)
-    items = SimpleCartItemSerializer(read_only=True, many=True)
-    total = serializers.SerializerMethodField()
-
-    def validate(self, attrs):
-        if Cart.objects.filter(customer=self.context['user']).exists():
-            raise serializers.ValidationError("You can't create another cart!")
-        return super().validate(attrs)
-
-    class Meta:
-        model = Cart
-        fields = (
-            'id', 'customer', 'items', 'created_at', 
-            'updated_at', 'total'
-        )
-        read_only_fields = ['id']
-
-    def get_total(self, obj):
-        return obj.total
-
-class AddCartItemSerializer(serializers.ModelSerializer):
-    dish_id = serializers.PrimaryKeyRelatedField(
-        queryset=Dish.objects.filter(is_available=True).order_by('-unit_price'),
-        source='dish',
-        write_only=True,
-    )
-    dish = SimpleDishSerializer(read_only=True)
-
-    class Meta:
-        model = CartItem
-        fields = ('id', 'dish_id', 'dish', 'quantity')
-        read_only_fields = ('id',)
-
-    def create(self, validated_data):
-        cart_pk = self.context['cart_pk']
-        dish = validated_data['dish']
-
-        cart_item, created = CartItem.objects.get_or_create(cart_id=cart_pk, dish=dish)
-
-        if not created:
-            cart_item.quantity += validated_data['quantity']
-            cart_item.save()
-        return cart_item
-
-class UpdateCartItemSerializer(serializers.ModelSerializer):
-    dish = SimpleDishSerializer(read_only=True)
-
-    class Meta:
-        model = CartItem
-        fields = ('quantity', 'dish')
-
-class CartItemSerializer(serializers.ModelSerializer):
-    dish = SimpleDishSerializer(read_only=True)
-    sub_total = serializers.SerializerMethodField()
-
-    class Meta:
-        model = CartItem
-        fields = ('id', 'cart', 'dish', 'quantity', 'sub_total')
-        read_only_fields = ['id', 'cart']
-
-    def get_sub_total(self, obj):
-        return obj.sub_total
-
-class PaymentMethodSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PaymentMethod
-        fields = ('id', 'name', 'type', 'is_active', 'processing_fee')
-        read_only_fields = ['id']
