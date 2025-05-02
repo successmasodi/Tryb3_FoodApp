@@ -13,7 +13,7 @@ DATABASES = {
         'HOST': os.getenv("HOST"),
         'PORT': os.getenv("PORT"),
         'OPTIONS':{
-          'ssl': True
+          'sslmode': 'require'
         }
     }
 }
