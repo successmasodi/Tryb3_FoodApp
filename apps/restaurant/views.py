@@ -1,149 +1,148 @@
-from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
-from django.utils import timezone,text
-from django.conf import settings
-from .managers import (CuisineManager, FoodCategoryManager, RestaurantManager)
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.response import Response
+from rest_framework import status
+from django_filters.rest_framework import DjangoFilterBackend
+from django.utils.decorators import method_decorator
+from apps.restaurant.documentation.restaurant.schemas import (
+    cuisine_docs, food_category_docs, restaurant_docs, dish_docs,
+    address_docs
+    )
+from .models import (
+    Address, Cuisine, FoodCategory, Restaurant, Dish
+    )
+from .serializers import (
+    AddressSerializer, CuisineSerializer, FoodCategorySerializer, RestaurantSerializer, DishSerializer
+    )
+from .permissions import (
+    IsAdminOrReadOnly, IsOwnerOrReadOnly, AlreadyExist, IsRestaurantOwnerOrReadOnly
+    )
 
-class Address(models.Model):
 
-    ADDRESS_TYPES = [
-        ('home', 'Home'),
-        ('work', 'Work'),
-        ('other', 'Other'),
+class AddressViewSet(ModelViewSet):
+    serializer_class = AddressSerializer
+    permission_classes = [IsOwnerOrReadOnly]
+
+    def get_queryset(self):
+        return Address.objects.select_related('owner').filter(owner=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+for method_name, decorator_func in address_docs.items():
+    AddressViewSet = method_decorator(name=method_name, decorator=decorator_func)(AddressViewSet)
+
+class CuisineViewSet(ModelViewSet):
+    '''View for cuisine. search by name, ordered by name and
+    restaurant_count: number of restaurant under the cuisine'''
+
+    queryset = Cuisine.objects.all()
+    serializer_class = CuisineSerializer
+    permission_classes = [IsAdminOrReadOnly]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['name']
+    ordering_fields = ['name', 'restaurant_count']
+
+    def destroy(self, request, *args, **kwargs):
+        cuisine = self.get_object()
+        if cuisine.restaurants.exists():
+            return Response({'status':'error','message':'cuisine is related to one or more objects restaurant. '
+            'Remove this relation before you can delete it'}, status=status.HTTP_400_BAD_REQUEST)
+        return super().destroy(request, *args, **kwargs)
+
+for method_name, decorator_func in cuisine_docs.items():
+    CuisineViewSet = method_decorator(decorator_func, name=method_name)(CuisineViewSet)
+
+
+class FoodCategoryViewSet(ModelViewSet):
+    '''View for Food category. search by name, ordered by name and
+    menu_count: number of dishes under the category'''
+
+    queryset = FoodCategory.objects.all()
+    serializer_class = FoodCategorySerializer
+    permission_classes = [IsAdminOrReadOnly]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['name']
+    ordering_fields = ['name', 'menu_count']
+
+    def destroy(self, request, *args, **kwargs):
+        category = self.get_object()
+        if category.dishes.exists():
+            return Response({'status':'error','message':'category is related to one or more objects dishes. '
+            'Remove this relation before you can delete it.'}, status=status.HTTP_400_BAD_REQUEST)
+        return super().destroy(request, *args, **kwargs)
+
+for method_name, decorator_func in food_category_docs.items():
+    FoodCategoryViewSet = method_decorator(decorator_func, name=method_name)(FoodCategoryViewSet)
+
+
+class RestaurantViewSet(ModelViewSet):
+    '''View for Restaurant.
+    search by:
+        'name', 'address', 'cuisine name', 'dishes name'
+    ordered by:
+        '-is_featured', '-rating', 'name
+    filter by:
+        'is featured',  'rating', 'cuisine name', 'owner'
+
+    menu_count: number of dishes by the restaurant
+
+    permission: Only owner can modify object.
+    '''
+
+    queryset = Restaurant.objects.select_related('owner', 'cuisine').prefetch_related('dishes')
+    serializer_class = RestaurantSerializer
+    permission_classes = [IsOwnerOrReadOnly]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    search_fields = ['name', 'address', 'cuisine__name', 'dishes__name']
+    filterset_fields = ['is_featured', 'rating', 'cuisine__name', 'owner']
+
+    def get_permissions(self):
+        permissions = super().get_permissions()
+        permissions.append(AlreadyExist(Restaurant))
+        return permissions
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+    def get_serializer_context(self):
+        return {'user': self.request.user}
+
+
+for method_name, decorator_func in restaurant_docs.items():
+    RestaurantViewSet = method_decorator(decorator_func, name=method_name)(RestaurantViewSet)
+
+
+class DishViewSet(ModelViewSet):
+    '''View for  Dish.
+    search by:
+        'name', 'restaurant name', 'category name'
+    ordered by:
+        'is_featured', 'is_available', 'unit_price', 'name'
+    filter by:
+        'is_featured', 'restaurant', 'category',
+        'is_vegetarian', 'is_vegan',
+        'is_gluten_free',  'is_available'
+    '''
+
+    queryset = Dish.objects.select_related('restaurant__cuisine'
+                                           ).prefetch_related('restaurant', 'category')
+    serializer_class = DishSerializer
+    permission_classes = [ IsRestaurantOwnerOrReadOnly]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    search_fields = ['name', 'restaurant__name', 'category__name']
+    filterset_fields = [
+        'is_featured', 'restaurant', 'category',
+        'is_vegetarian', 'is_vegan',
+        'is_gluten_free',  'is_available'
     ]
 
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='addresses')
-    street_address = models.CharField(max_length=255)
-    address_type = models.CharField(max_length=20, choices=ADDRESS_TYPES,default='home')
-    city = models.CharField(max_length=100)
-    state = models.CharField(max_length=100)
-    country = models.CharField(max_length=100)
-    postal_code = models.CharField(max_length=20)
-    is_default = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    def perform_create(self, serializer):
+        restaurant = Restaurant.objects.filter(owner=self.request.user).first()
+        serializer.save(restaurant=restaurant)
 
-    def __str__(self):
-        return f"{self.address_type} : {self.owner.email} - {self.street_address}, {self.city}, {self.state},({self.postal_code})"
+    def get_serializer_context(self):
+        return {'user': self.request.user}
 
-    def save(self, *args, **kwargs):
-        if self.is_default:
-            Address.objects.filter(customer=self.owner, is_default=True).update(is_default=False)
-        super().save(*args, **kwargs)
-
-
-class Cuisine(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
-    description = models.TextField(blank=True)
-    image = models.ImageField(upload_to='cuisine_images/', blank=True, null=True)
-    objects = CuisineManager()
-
-    class Meta:
-        verbose_name = 'Cuisine'
-        verbose_name_plural = 'Cuisines'
-        ordering = ('name',)
-
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            self.slug = text.slugify(self.name)
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return self.name
-
-
-class FoodCategory(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
-    description = models.TextField(blank=True)
-    objects = FoodCategoryManager()
-
-    class Meta:
-        verbose_name = 'Food Category'
-        verbose_name_plural = 'Food Categories'
-        ordering = ('name',)
-
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            self.slug = text.slugify(self.name)
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return self.name
-
-
-class Restaurant(models.Model):
-    owner = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='restaurant_owner')
-    name = models.CharField(max_length=255, unique=True, help_text='name of your restaurant must be unique to your business.')
-    slug = models.SlugField(max_length=255, unique=True)
-    description = models.TextField(blank=True)
-    address = models.TextField()
-    cuisine = models.ForeignKey(Cuisine, on_delete=models.PROTECT, related_name='restaurants')
-    rating = models.DecimalField(
-        max_digits=3, decimal_places=1, default=0.0, validators=[MinValueValidator(0.0), MaxValueValidator(5.0)]
-    )
-    delivery_time = models.CharField(max_length=100,help_text="Average delivery time in minutes")
-    minimum_order = models.IntegerField(default=1)
-    image = models.ImageField(upload_to='restaurant_images/', blank=True, null=True)
-    cover_image = models.ImageField(upload_to='restaurant_cover_images/', blank=True, null=True)
-    is_featured = models.BooleanField(default=False)
-    is_active = models.BooleanField(default=False)
-    date_joined = models.DateTimeField(default=timezone.now)
-    created_at = models.DateTimeField(auto_now_add=True)
-    objects = RestaurantManager()
-
-    class Meta:
-        ordering = ('-is_featured', '-rating', 'name')
-        indexes = [
-            models.Index(fields=['slug']),
-            models.Index(fields=['cuisine', 'is_featured']),
-            models.Index(fields=['rating']),
-        ]
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            self.slug = text.slugify(self.name)
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"{self.name} ({self.cuisine.name})"
-
-
-class Dish(models.Model):
-    #same as menu
-    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='dishes')
-    name = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=255, unique=True)
-    description = models.TextField(blank=True)
-    unit_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0.01)])
-    category = models.ForeignKey(FoodCategory, on_delete=models.PROTECT, related_name='dishes')
-    preparation_time = models.IntegerField(help_text="Preparation time in minutes")
-    is_vegetarian = models.BooleanField(default=False)
-    is_vegan = models.BooleanField(default=False)
-    is_gluten_free = models.BooleanField(default=False)
-    is_featured = models.BooleanField(default=False)
-    is_available= models.BooleanField(default=True, help_text="a dish won't be available if it's out of stock")
-    image = models.ImageField(upload_to='dish_images/',blank=True,null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name_plural = 'Dishes'
-        ordering = ('is_featured', 'is_available', 'unit_price', 'name')
-        indexes = [
-            models.Index(fields=[ 'is_featured','is_available', 'unit_price', 'name',]),
-        ]
-
-    def __str__(self):
-        return f"{self.name} from {self.restaurant.name} - N{self.unit_price}"
-
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            base_slug = text.slugify(self.name)
-            unique_slug = base_slug
-            counter = 1
-            while Dish.objects.filter(slug=unique_slug).exists():
-                unique_slug = f"{base_slug}-{counter}"
-                counter += 1
-            self.slug = unique_slug
-        super().save(*args, **kwargs)
+for method_name, decorator_func in dish_docs.items():
+    DishViewSet = method_decorator(name=method_name, decorator=decorator_func) (DishViewSet)
