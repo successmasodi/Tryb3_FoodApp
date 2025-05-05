@@ -2,7 +2,8 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone,text
 from django.conf import settings
-from .managers import (CuisineManager, FoodCategoryManager,RestaurantManager)
+from .managers import (CuisineManager, FoodCategoryManager, RestaurantManager)
+
 
 class Address(models.Model):
 
@@ -72,7 +73,7 @@ class FoodCategory(models.Model):
     def __str__(self):
         return self.name
 
- 
+
 class Restaurant(models.Model):
     owner = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='restaurant_owner')
     name = models.CharField(max_length=255, unique=True, help_text='name of your restaurant must be unique to your business.')

@@ -3,7 +3,6 @@ from .models import (
     Address, Cuisine, Restaurant, Dish, FoodCategory,
     )
 
-# Register your models here.
 admin.site.register(Address)
 
 

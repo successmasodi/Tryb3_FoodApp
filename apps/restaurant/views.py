@@ -32,6 +32,7 @@ class AddressViewSet(ModelViewSet):
 for method_name, decorator_func in address_docs.items():
     AddressViewSet = method_decorator(name=method_name, decorator=decorator_func)(AddressViewSet)
 
+
 class CuisineViewSet(ModelViewSet):
     '''View for cuisine. search by name, ordered by name and
     restaurant_count: number of restaurant under the cuisine'''

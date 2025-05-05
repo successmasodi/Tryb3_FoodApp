@@ -1,9 +1,8 @@
 import os
 import requests
-from django.shortcuts import redirect, HttpResponse
+from django.shortcuts import HttpResponse
 from django.utils.decorators import method_decorator 
 from dotenv import load_dotenv
-
 from django.db import transaction
 from django.urls import reverse
 from rest_framework.viewsets import ModelViewSet
@@ -28,7 +27,7 @@ from .serializers import (PaymentMethodSerializer, DeliveryMethodSerializer, Car
                           )
 from .utils import decrypt_token, get_flutter_header
 load_dotenv()
-# Create your views here.
+
 
 
 @api_view(['POST'])
