@@ -104,7 +104,7 @@ class DishSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dish
         fields = (
-            'id', 'restaurant', 'name', 'image', 'description', 'price',
+            'id', 'restaurant', 'name', 'slug', 'image', 'description', 'price',
             'category', 'food_category', 'preparation_time', 'is_vegetarian',
             'is_vegan', 'is_gluten_free', 'is_available',
             'image', 'created_at', 'updated_at'
