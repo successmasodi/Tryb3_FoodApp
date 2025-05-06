@@ -1,13 +1,9 @@
 from django.contrib import admin
 from .models import (
-    Address, Cuisine, Restaurant, Dish, FoodCategory,
-    Cart, CartItem, PaymentMethod, Order, OrderItem
+    Address, Cuisine, Restaurant, Dish, FoodCategory
 )
 
 admin.site.register(Address)
-admin.site.register(PaymentMethod)
-admin.site.register(Cart)
-admin.site.register(CartItem)
 
 @admin.register(Cuisine)
 class CuisineAdmin(admin.ModelAdmin):

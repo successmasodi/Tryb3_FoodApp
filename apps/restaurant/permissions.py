@@ -10,15 +10,12 @@ class IsAdminOrReadOnly(permissions.BasePermission):
             return request.user.is_staff
         return True
 
-class IsOwnerOrReadOnly(permissions.BasePermission):
+
+class IsOwnerOrReadOnly(permissions.IsAuthenticated):
     """
     An authenticated user is allowed to create while a user is allowed to modify their own object e.g Restaurant...
     """
     message = "Not allowed for non-owner"
-    def has_permission(self, request, view):
-        if request.method and request.method not in permissions.SAFE_METHODS:
-            return bool(request.user and request.user.is_authenticated)
-        return True
 
     def has_object_permission(self, request,view, obj):
         if request.method and request.method not in permissions.SAFE_METHODS:

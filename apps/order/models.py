@@ -207,4 +207,3 @@ class OrderItem(models.Model):
     @property
     def sub_total(self):
         return Decimal(self.unit_price * self.quantity)
-        
