@@ -21,7 +21,8 @@ class IsOwnerOrReadOnly(permissions.IsAuthenticated):
         if request.method and request.method not in permissions.SAFE_METHODS:
             return bool(obj.owner == request.user)
         return True
-    
+
+
 class IsCustomerOrReadOnly(IsOwnerOrReadOnly):
     """
     Only customer are allowed to modify their own object.
@@ -62,7 +63,7 @@ class AlreadyExist(permissions.BasePermission):
             if hasattr(self.model,'owner'):
                 if self.model.objects.only('id').filter(owner=request.user).exists():
                     return False
-    
+
         if hasattr(self.model,'customer'):
             if Cart.objects.only('id').filter(customer=request.user).exists():
                 return False
@@ -79,7 +80,7 @@ class AlreadyExist(permissions.BasePermission):
 
     def __init__(self, model=None):
         self.model = model
-        
+
     def get_message(self):
         return f"You can't create another {self.model.__name__}"
 

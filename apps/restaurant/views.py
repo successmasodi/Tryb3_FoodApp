@@ -13,7 +13,7 @@ from .models import (
     Address, Cuisine, FoodCategory, Restaurant, Dish
 )
 from .serializers import (
-    AddressSerializer, CuisineSerializer, FoodCategorySerializer, 
+    AddressSerializer, CuisineSerializer, FoodCategorySerializer,
     RestaurantSerializer, DishSerializer
 )
 from .permissions import (
