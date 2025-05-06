@@ -56,7 +56,8 @@ class RestaurantAdmin(admin.ModelAdmin):
 
 @admin.register(Dish)
 class DishAdmin(admin.ModelAdmin):
-    fields = ('restaurant', 'name', 'description', 'unit_price', 'category', 'preparation_time',
+    prepopulated_fields = {'slug': ['name']}
+    fields = ('restaurant',  'name', 'slug', 'description', 'unit_price', 'category', 'preparation_time',
               'is_vegetarian', 'is_vegan', 'is_gluten_free', 'is_available', 'is_featured', 'image')
     list_display = ('id', 'name', 'restaurant', 'unit_price',
                     'category', 'is_available', 'is_featured')
@@ -71,5 +72,3 @@ class DishAdmin(admin.ModelAdmin):
     @admin.display(ordering='name')
     def display_name(self, dish):
         return dish.name
-
-

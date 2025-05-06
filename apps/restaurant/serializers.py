@@ -66,11 +66,6 @@ class RestaurantSerializer(serializers.ModelSerializer):
     menu_count = serializers.SerializerMethodField()
     menu = SimpleDishSerializer(source='dishes', many=True, read_only=True)
 
-    def validate(self, attrs):
-        if Restaurant.objects.only('id').filter(owner=self.context['user']).exists():
-            raise serializers.ValidationError('You own a restaurant already.')
-        return super().validate(attrs)
-
     def get_menu_count(self,obj):
         return obj.menu_count
 
@@ -81,7 +76,7 @@ class RestaurantSerializer(serializers.ModelSerializer):
             'cuisine', 'rating', 'delivery_time', 'minimum_order',
             'image', 'cover_image', 'is_featured', 'menu_count', 'menu', 'date_joined'
         )
-        read_only_fields = ('id', 'rating', 'owner', 'menu_count')
+        read_only_fields = ('id', 'slug', 'rating', 'owner', 'menu_count')
 
 
 class DishSerializer(serializers.ModelSerializer):
@@ -109,4 +104,4 @@ class DishSerializer(serializers.ModelSerializer):
             'is_vegan', 'is_gluten_free', 'is_available',
             'image', 'created_at', 'updated_at'
         )
-        read_only_fields = ('id', 'restaurant', 'created_at', 'updated_at')
+        read_only_fields = ['id', 'slug', 'restaurant', 'created_at', 'updated_at']

@@ -2,6 +2,7 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils.decorators import method_decorator
 from apps.restaurant.documentation.restaurant.schemas import (
@@ -104,11 +105,9 @@ class RestaurantViewSet(ModelViewSet):
         return permissions
 
     def perform_create(self, serializer):
+        if  Restaurant.objects.filter(owner=self.request.user).exists():
+            raise ValidationError('You own a restaurant already.')
         serializer.save(owner=self.request.user)
-
-    def get_serializer_context(self):
-        return {'user': self.request.user}
-
 
 for method_name, decorator_func in restaurant_docs.items():
     RestaurantViewSet = method_decorator(decorator_func, name=method_name)(RestaurantViewSet)

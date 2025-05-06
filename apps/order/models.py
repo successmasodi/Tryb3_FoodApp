@@ -48,7 +48,7 @@ class DeliveryMethod(models.Model):
 
     class Meta:
         ordering = ['base_fee']
-    
+
     def __str__(self):
         return f"({self.get_delivery_type_display()} {self.base_fee})"
 
@@ -125,8 +125,8 @@ class PaymentRecord(models.Model):
         indexes = [models.Index(fields=['cart', 'tx_ref'])]
 
     def __str__(self):
-        return f'{self.payment_method} - {self.tx_ref[:8]}...'
-    
+        return f'{self.payment_method} - {str(self.tx_ref)[:8]}...'
+
     @classmethod
     def get_or_create_for_cart(cls, cart):
         record, created = cls.objects.get_or_create(
