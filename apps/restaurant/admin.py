@@ -1,10 +1,13 @@
 from django.contrib import admin
 from .models import (
     Address, Cuisine, Restaurant, Dish, FoodCategory,
-    )
+    Cart, CartItem, PaymentMethod, Order, OrderItem
+)
 
 admin.site.register(Address)
-
+admin.site.register(PaymentMethod)
+admin.site.register(Cart)
+admin.site.register(CartItem)
 
 @admin.register(Cuisine)
 class CuisineAdmin(admin.ModelAdmin):
@@ -19,7 +22,6 @@ class CuisineAdmin(admin.ModelAdmin):
     def restaurant_count(self, cuisine):
         return cuisine.restaurant_count
 
-
 @admin.register(FoodCategory)
 class FoodCategoryAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ['name']}
@@ -33,7 +35,6 @@ class FoodCategoryAdmin(admin.ModelAdmin):
     @admin.display(ordering='menu_count')
     def menu_count(self, obj):
         return obj.menu_count
-
 
 @admin.register(Restaurant)
 class RestaurantAdmin(admin.ModelAdmin):
@@ -52,7 +53,6 @@ class RestaurantAdmin(admin.ModelAdmin):
     @admin.display(ordering='menu_count')
     def menu_count(self, obj):
         return obj.menu_count
-
 
 @admin.register(Dish)
 class DishAdmin(admin.ModelAdmin):

@@ -1,9 +1,7 @@
 from rest_framework import serializers
 from .models import (
-    Address, Cuisine, FoodCategory, Restaurant, Dish
+    Address, Cuisine, FoodCategory, Restaurant, Dish, Cart, CartItem, PaymentMethod
 )
-
-
 
 class AddressSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField()
@@ -14,13 +12,11 @@ class AddressSerializer(serializers.ModelSerializer):
                   'city', 'state', 'country', 'postal_code', 'is_default')
         read_only_fields = ('id', 'user')
 
-
 class SimpleCuisineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cuisine
         fields = ('id', 'name', 'slug',)
         read_only_fields = ('id', 'slug')
-
 
 class CuisineSerializer(serializers.ModelSerializer):
     restaurant_count = serializers.IntegerField(read_only=True)
@@ -31,7 +27,6 @@ class CuisineSerializer(serializers.ModelSerializer):
                   'restaurant_count', 'image')
         read_only_fields = ('id', 'slug')
 
-
 class FoodCategorySerializer(serializers.ModelSerializer):
     menu_count = serializers.IntegerField(read_only=True)
 
@@ -40,13 +35,11 @@ class FoodCategorySerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'slug', 'menu_count', 'description')
         read_only_fields = ('id', 'slug')
 
-
 class SimpleRestaurantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Restaurant
-        fields = ('id', 'name',  'rating')
+        fields = ('id', 'name', 'rating')
         read_only_fields = ('id', 'rating')
-
 
 class SimpleDishSerializer(serializers.ModelSerializer):
     price = serializers.DecimalField(source='unit_price', max_digits=10, decimal_places=2)
@@ -56,7 +49,6 @@ class SimpleDishSerializer(serializers.ModelSerializer):
         ref_name = 'MenuSerializer'
         fields = ('id', 'name', 'price', 'category', 'image')
         read_only_fields = ('id',)
-
 
 class RestaurantSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField(read_only=True)
@@ -78,7 +70,6 @@ class RestaurantSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ('id', 'slug', 'rating', 'owner', 'menu_count')
 
-
 class DishSerializer(serializers.ModelSerializer):
     restaurant = SimpleRestaurantSerializer(read_only=True)
     category = FoodCategorySerializer(read_only=True)
@@ -87,11 +78,9 @@ class DishSerializer(serializers.ModelSerializer):
         slug_field='name', write_only=True
     )
     price = serializers.DecimalField(
-        source='unit_price', max_digits=10, decimal_places=2,)
+        source='unit_price', max_digits=10, decimal_places=2)
 
     def validate(self, attrs):
-        '''A user must have a restaurant before creating dishes.'''
-
         if not Restaurant.objects.filter(owner=self.context['user']).exists():
             raise serializers.ValidationError('You should own a restaurant before creating a dish.')
         return attrs
@@ -105,3 +94,96 @@ class DishSerializer(serializers.ModelSerializer):
             'image', 'created_at', 'updated_at'
         )
         read_only_fields = ['id', 'slug', 'restaurant', 'created_at', 'updated_at']
+
+class BasicDishSerializer(serializers.ModelSerializer):
+    price = serializers.DecimalField(source='unit_price', max_digits=10, decimal_places=2)
+
+    class Meta:
+        model = Dish
+        fields = ('name', 'price')
+
+class SimpleCartItemSerializer(serializers.ModelSerializer):
+    dish = BasicDishSerializer(read_only=True)
+    sub_total = serializers.SerializerMethodField()
+    restaurant = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CartItem
+        fields = ('id', 'dish', 'quantity', 'sub_total', 'restaurant')
+        read_only_fields = ['id']
+
+    def get_sub_total(self, obj):
+        return obj.sub_total
+
+    def get_restaurant(self, obj):
+        return obj.restaurant_name
+
+class CartSerializer(serializers.ModelSerializer):
+    customer = serializers.StringRelatedField(read_only=True)
+    items = SimpleCartItemSerializer(read_only=True, many=True)
+    total = serializers.SerializerMethodField()
+
+    def validate(self, attrs):
+        if Cart.objects.filter(customer=self.context['user']).exists():
+            raise serializers.ValidationError("You can't create another cart!")
+        return super().validate(attrs)
+
+    class Meta:
+        model = Cart
+        fields = (
+            'id', 'customer', 'items', 'created_at', 
+            'updated_at', 'total'
+        )
+        read_only_fields = ['id']
+
+    def get_total(self, obj):
+        return obj.total
+
+class AddCartItemSerializer(serializers.ModelSerializer):
+    dish_id = serializers.PrimaryKeyRelatedField(
+        queryset=Dish.objects.filter(is_available=True).order_by('-unit_price'),
+        source='dish',
+        write_only=True,
+    )
+    dish = SimpleDishSerializer(read_only=True)
+
+    class Meta:
+        model = CartItem
+        fields = ('id', 'dish_id', 'dish', 'quantity')
+        read_only_fields = ('id',)
+
+    def create(self, validated_data):
+        cart_pk = self.context['cart_pk']
+        dish = validated_data['dish']
+
+        cart_item, created = CartItem.objects.get_or_create(cart_id=cart_pk, dish=dish)
+
+        if not created:
+            cart_item.quantity += validated_data['quantity']
+            cart_item.save()
+        return cart_item
+
+class UpdateCartItemSerializer(serializers.ModelSerializer):
+    dish = SimpleDishSerializer(read_only=True)
+
+    class Meta:
+        model = CartItem
+        fields = ('quantity', 'dish')
+
+class CartItemSerializer(serializers.ModelSerializer):
+    dish = SimpleDishSerializer(read_only=True)
+    sub_total = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CartItem
+        fields = ('id', 'cart', 'dish', 'quantity', 'sub_total')
+        read_only_fields = ['id', 'cart']
+
+    def get_sub_total(self, obj):
+        return obj.sub_total
+
+class PaymentMethodSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PaymentMethod
+        fields = ('id', 'name', 'type', 'is_active', 'processing_fee')
+        read_only_fields = ['id']
