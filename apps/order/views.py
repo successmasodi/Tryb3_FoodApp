@@ -21,7 +21,7 @@ from apps.order.documentation.schemas import (
     payment_method_docs
 )
 from .models import PaymentMethod, DeliveryMethod, Cart, CartItem, PaymentRecord, Order, OrderItem
-from .permissions import IsStaffOrReadOnly, IsOwnerOrReadOnly
+from .permissions import IsStaffOrReadOnly, IsOwnerOrAuthenticated
 from .serializers import (PaymentMethodSerializer, DeliveryMethodSerializer, CartSerializer,
                           AddCartItemSerializer, OrderSerializer
                           )
@@ -118,14 +118,12 @@ class DeliveryMethodViewSet(ModelViewSet):
         return DeliveryMethod.objects.filter(is_active=True)
 
 
-
-
 class CartViewSet(ModelViewSet):
     '''include the Cart_id in the body to include other details,
     to add/increment item to/in a cart go the the cart/add-items '''
 
     serializer_class = CartSerializer
-    permission_classes = [IsOwnerOrReadOnly]
+    permission_classes = [IsOwnerOrAuthenticated]
 
     def get_queryset(self):
         return Cart.objects.select_related('customer').filter(customer=self.request.user)

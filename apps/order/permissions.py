@@ -16,15 +16,11 @@ class IsStaffOrReadOnly(permissions.BasePermission):
         return True
 
 
-class IsOwnerOrReadOnly(permissions.BasePermission):
+class IsOwnerOrAuthenticated(permissions.IsAuthenticated):
     """
     An authenticated user is allowed to create while a user is allowed to modify their own object ...
     """
     message = "Not allowed for non-owner"
-    def has_permission(self, request, view):
-        if request.method and request.method not in permissions.SAFE_METHODS:
-            return bool(request.user and request.user.is_authenticated)
-        return True
 
     def has_object_permission(self, request,view, obj):
         return bool(obj.customer == request.user)

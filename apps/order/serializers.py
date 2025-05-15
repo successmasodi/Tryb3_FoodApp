@@ -128,7 +128,7 @@ class AddCartItemSerializer(serializers.ModelSerializer):
 
         cart, created = Cart.objects.get_or_create(customer=user, restaurant=restaurant)
 
-        if not created:  
+        if not created:
             # Check if the item already exists in the cart
             existing_item = cart.items.filter(dish=dish).first()
             if existing_item:  # If the item already exists, increment the quantity
