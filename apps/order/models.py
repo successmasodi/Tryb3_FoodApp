@@ -20,7 +20,7 @@ class PaymentMethod(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        ordering = ['is_active']
+        ordering = ['payment_type']
         indexes =[ models.Index(fields=('is_active',)) ]
 
     def __str__(self):
@@ -56,13 +56,18 @@ class DeliveryMethod(models.Model):
         """Calculate dynamic delivery fee"""
         fee = self.base_fee + (self.distance_fee * distance_km)
         return round(fee, 2)
+    
+    @property
+    def estimated_time_text(self):
+        return f"{self.estimated_min_minutes}-{self.estimated_max_minutes} mins"
+
 
 
 class Cart(models.Model):
     id = models.UUIDField(primary_key=True, unique=True, default=uuid4,editable=False)
     customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='carts')
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
-    address = models.ForeignKey(Address, on_delete=models.CASCADE, null=True, blank=True)
+    address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True, blank=True)
     payment_method = models.ForeignKey(PaymentMethod, on_delete=models.SET_NULL, null=True, blank=True)
     delivery_method = models.ForeignKey(DeliveryMethod, on_delete=models.SET_NULL, null=True, blank=True)
     special_instructions = models.TextField(blank=True)

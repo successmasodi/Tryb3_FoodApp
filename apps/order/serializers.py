@@ -101,7 +101,7 @@ class AddCartItemSerializer(serializers.ModelSerializer):
     '''
     cart = serializers.PrimaryKeyRelatedField(read_only=True)
     dish_id = serializers.PrimaryKeyRelatedField(
-        queryset=Dish.objects.filter(is_available=True).order_by('-unit_price'),
+        queryset= Dish.objects.filter(is_available=True).order_by('-unit_price'),
         source='dish', write_only=True
     )
     dish = SimpleDishSerializer(read_only=True)

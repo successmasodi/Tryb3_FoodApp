@@ -1,7 +1,7 @@
 from rest_framework import permissions
 
 
-class IsAdminOrReadOnly(permissions.BasePermission):
+class IsStaffOrReadOnly(permissions.BasePermission):
 
     message = 'Only staff are allowed to modify'
 

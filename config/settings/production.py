@@ -12,7 +12,9 @@ DATABASES = {
         'USER': os.getenv("USER"),
         'PASSWORD': os.getenv("DB_PASSWORD"),
         'HOST': os.getenv("HOST"),
-        'PORT':  os.getenv("PORT", "3306")
+        'PORT':  os.getenv("PORT", "3306"),
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'"
         
     }
 }

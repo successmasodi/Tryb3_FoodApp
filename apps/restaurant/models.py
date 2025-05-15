@@ -59,7 +59,7 @@ class Address(models.Model):
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='addresses')
     street_address = models.CharField(max_length=255)
-    address_type = models.CharField(max_length=20, choices=ADDRESS_TYPES,default='home')
+    address_type = models.CharField(max_length=20, choices=ADDRESS_TYPES, default='home')
     city = models.CharField(max_length=100)
     state = models.CharField(max_length=100)
     country = models.CharField(max_length=100)

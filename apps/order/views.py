@@ -21,7 +21,7 @@ from apps.order.documentation.schemas import (
     payment_method_docs
 )
 from .models import PaymentMethod, DeliveryMethod, Cart, CartItem, PaymentRecord, Order, OrderItem
-from .permissions import IsAdminOrReadOnly, IsOwnerOrReadOnly
+from .permissions import IsStaffOrReadOnly, IsOwnerOrReadOnly
 from .serializers import (PaymentMethodSerializer, DeliveryMethodSerializer, CartSerializer,
                           AddCartItemSerializer, OrderSerializer
                           )
@@ -86,15 +86,19 @@ def webhook(request):
     return HttpResponse(status=200)
 
 
-
 class PaymentMethodViewSet(ModelViewSet):
-    '''CRUD payment method by only admin.'''
-    queryset = PaymentMethod.objects.all()
+    '''CRUD payment method by only admin other readonly for active methods.'''
     serializer_class = PaymentMethodSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsStaffOrReadOnly]
     filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ['payment_type', 'is_active']
+    search_fields = ['payment_type']
     ordering_fields = ['is_active']
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return PaymentMethod.objects.all()
+        return PaymentMethod.objects.filter(is_active=True)
+
 
 for method_name, decorator_func in payment_method_docs.items():
     PaymentMethodViewSet = method_decorator(name=method_name, decorator=decorator_func)(PaymentMethodViewSet)
@@ -102,12 +106,18 @@ for method_name, decorator_func in payment_method_docs.items():
 
 class DeliveryMethodViewSet(ModelViewSet):
     '''CRUD Delivery method by only admin.'''
-    queryset = DeliveryMethod.objects.all()
     serializer_class = DeliveryMethodSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsStaffOrReadOnly]
     filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ['delivery_type', 'is_active','base_fee']
+    search_fields = ['delivery_type', 'base_fee']
     ordering_fields = ['is_active','base_fee']
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return DeliveryMethod.objects.all()
+        return DeliveryMethod.objects.filter(is_active=True)
+
+
 
 
 class CartViewSet(ModelViewSet):
@@ -235,7 +245,6 @@ class AddCartItemsApiVIew(ListCreateAPIView):
     you want to order dish from. If they have, we check if the item already exist
     in the restaurant cart returned if yes, we increment the quantity, else we add the new dish.
     '''
-
     serializer_class = AddCartItemSerializer
     permission_classes = [IsAuthenticated]
 
@@ -275,7 +284,7 @@ class OrderViewSet(ModelViewSet):
 
     http_method_names = ['get','options','patch']
     serializer_class = OrderSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsStaffOrReadOnly]
     filter_backends = [SearchFilter, OrderingFilter]
     search_fields = ['status', 'payment_status','restaurant_name']
     ordering_fields = ['is_active','total','total']
