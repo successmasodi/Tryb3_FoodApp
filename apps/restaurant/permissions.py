@@ -31,7 +31,7 @@ class IsCustomerOrReadOnly(IsOwnerOrReadOnly):
     """
     def has_object_permission(self, request, view, obj):
         if request.method and request.method not in permissions.SAFE_METHODS:
-            return bool( obj.customer == request.user)
+            return bool(obj.customer == request.user)
         return True
 
 

@@ -9,24 +9,25 @@ from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from decimal import Decimal
 from .models import (
-    Address ,Cuisine, FoodCategory, Restaurant, Dish, Cart , CartItem, PaymentMethod, DeliveryMethod,
-    Order,OrderItem
-    )
-from .serializers import ( 
-     AddressSerializer,CuisineSerializer, FoodCategorySerializer, RestaurantSerializer, DishSerializer,
-     CartSerializer, AddCartItemSerializer, PaymentMethodSerializer,DeliveryMethodSerializer,
-    OrderSerializer,OrderItemSerializer
-                          )
+    Address, Cuisine, FoodCategory, Restaurant, Dish, Cart, CartItem, PaymentMethod, DeliveryMethod,
+    Order, OrderItem
+)
+from .serializers import (
+    AddressSerializer, CuisineSerializer, FoodCategorySerializer, RestaurantSerializer, DishSerializer,
+    CartSerializer, AddCartItemSerializer, PaymentMethodSerializer, DeliveryMethodSerializer,
+    OrderSerializer, OrderItemSerializer
+)
 from rest_framework.permissions import IsAuthenticated
-from .permissions import ( IsAdminOrReadOnly, IsOwnerOrReadOnly, IsRestaurantOwnerOrReadOnly, IsCustomerOrReadOnly, 
+from .permissions import (IsAdminOrReadOnly, IsOwnerOrReadOnly, IsRestaurantOwnerOrReadOnly, IsCustomerOrReadOnly,
                           AlreadyExist
                           )
 
 from .payment_processing import get_processor
-# Create your views here.
+
+
 class AddressViewSet(ModelViewSet):
     serializer_class = AddressSerializer
-    permission_classes = [ IsAuthenticated ,IsOwnerOrReadOnly]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
     def get_queryset(self):
         return Address.objects.select_related('owner').filter(owner=self.request.user)
@@ -72,22 +73,16 @@ class RestaurantViewSet(ModelViewSet):
 
     permission: Only owner can modify object.
     '''
-    # Currently a user can own more than one restaurant. is this okay?
 
     queryset = Restaurant.objects.select_related('owner', 'cuisine').prefetch_related('dishes')
     serializer_class = RestaurantSerializer
     permission_classes = [IsOwnerOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    search_fields = [
-        'name', 'address', 'cuisine__name', 'dishes__name'
-    ]
-    filterset_fields = [
-        'is_featured', 'rating', 'cuisine__name','owner'
-    ]
+    search_fields = ['name', 'address', 'cuisine__name', 'dishes__name']
+    filterset_fields = ['is_featured', 'rating', 'cuisine__name', 'owner']
 
     def get_permissions(self):
         permissions = super().get_permissions()
-        # Add the custom permission 
         permissions.append(AlreadyExist(Restaurant))
         return permissions
 
@@ -95,7 +90,7 @@ class RestaurantViewSet(ModelViewSet):
         serializer.save(owner=self.request.user)
 
     def get_serializer_context(self):
-        return {'user':self.request.user}
+        return {'user': self.request.user}
 
 
 class DishViewSet(ModelViewSet):
@@ -111,7 +106,7 @@ class DishViewSet(ModelViewSet):
     '''
 
     queryset = Dish.objects.select_related('restaurant', 'restaurant__cuisine'
-    ).prefetch_related('category')
+                                           ).prefetch_related('category')
     serializer_class = DishSerializer
     # permission_classes = [ IsRestaurantOwnerOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter]
@@ -119,7 +114,7 @@ class DishViewSet(ModelViewSet):
     filterset_fields = [
         'is_featured', 'restaurant', 'category',
         'is_vegetarian', 'is_vegan',
-        'is_gluten_free',  'is_available'
+        'is_gluten_free', 'is_available'
     ]
 
     def perform_create(self, serializer):
@@ -127,12 +122,12 @@ class DishViewSet(ModelViewSet):
         serializer.save(restaurant=restaurant)
 
     def get_serializer_context(self):
-        return {'user':self.request.user}
+        return {'user': self.request.user}
 
 
 class CartViewSet(ModelViewSet):
     '''include the Cart_id in the body to include other instruction,
-    to add/increment item to/in a cart go the the cart/add-items '''
+    to add/increment item to/in a cart go the cart/add-items '''
 
     serializer_class = CartSerializer
     permission_classes = [IsCustomerOrReadOnly]
@@ -142,24 +137,24 @@ class CartViewSet(ModelViewSet):
 
     def get_serializer_context(self):
         '''include user and their owned address in the context.
-        i am checking auth incase user isn't authenticated'''
+        I am checking auth incase user isn't authenticated'''
         if self.request.user.is_authenticated:
-            return {'user':self.request.user}
+            return {'user': self.request.user}
         return super().get_serializer_context()
 
-    @action(detail=True,methods=['GET'],permission_classes=[IsAuthenticated])
-    def checkout(self,request,pk=None):
+    @action(detail=True, methods=['GET'], permission_classes=[IsAuthenticated])
+    def checkout(self, request, pk=None):
 
         cart = self.get_object()
         try:
             with transaction.atomic():
-                self.validate_cart(cart,self.get_serializer_context())
+                self.validate_cart(cart, self.get_serializer_context())
 
                 processor = get_processor(cart.payment_method.payment_type)
-                result = processor.charge(cart.total,'xyz', cart=cart)
+                result = processor.charge(cart.total, 'xyz', cart=cart)
                 if not result:
-                    return Response('payment unsuccessfully',status=status.HTTP_402_PAYMENT_REQUIRED)
-                
+                    return Response('payment unsuccessfully', status=status.HTTP_402_PAYMENT_REQUIRED)
+
                 # payment successful create order and orderitem
                 order = self.create_order_with_item_from_cart(cart)
 
@@ -170,15 +165,14 @@ class CartViewSet(ModelViewSet):
                                 status=status.HTTP_200_OK)
 
         except ValidationError as e:
-            return Response(str(e),status=status.HTTP_400_BAD_REQUEST)
+            return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response(
                 {"error": f"Checkout failed {e}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-
-    def validate_cart(self, cart:Cart, context:dict):
+    def validate_cart(self, cart: Cart, context: dict):
         """Ensure cart has all required checkout components"""
         if not cart.address:
             raise ValidationError("Delivery address not set")
@@ -191,7 +185,7 @@ class CartViewSet(ModelViewSet):
         if not cart.delivery_method:
             raise ValidationError("Delivery method not selected")
 
-    def create_order_with_item_from_cart(self,cart:Cart):
+    def create_order_with_item_from_cart(self, cart: Cart):
 
         order = Order()
         order.customer = cart.customer
@@ -208,11 +202,11 @@ class CartViewSet(ModelViewSet):
 
         order.save()
 
-        items = [ OrderItem(
+        items = [OrderItem(
             order=order,
-            dish_name = item.dish.name,
-            unit_price = item.dish.unit_price,
-            quantity = item.quantity,
+            dish_name=item.dish.name,
+            unit_price=item.dish.unit_price,
+            quantity=item.quantity,
 
         ) for item in cart.items.all()]
 
@@ -235,7 +229,7 @@ class AddCartItemsApiVIew(ListCreateAPIView):
         return CartItem.objects.select_related('cart').filter(cart__customer=self.request.user).order_by('updated_at')
 
     def get_serializer_context(self):
-        return { 'user':self.request.user}
+        return {'user': self.request.user}
 
 
 class PaymentMethodViewSet(ModelViewSet):
@@ -244,8 +238,9 @@ class PaymentMethodViewSet(ModelViewSet):
     serializer_class = PaymentMethodSerializer
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ['payment_type','is_active']
-    ordering_fields =['is_active']
+    search_fields = ['payment_type', 'is_active']
+    ordering_fields = ['is_active']
+
 
 class DeliveryMethodViewSet(ModelViewSet):
     '''CRUD Delivery method by only admin.'''
@@ -253,18 +248,17 @@ class DeliveryMethodViewSet(ModelViewSet):
     serializer_class = DeliveryMethodSerializer
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ['delivery_type','is_active','base_fee']
-    ordering_fields =['is_active','base_fee']
+    search_fields = ['delivery_type', 'is_active', 'base_fee']
+    ordering_fields = ['is_active', 'base_fee']
+
 
 class OrderViewSet(ModelViewSet):
     '''CRUD Order by only admin.'''
     serializer_class = OrderSerializer
     # permission_classes = [IsCustomerOrReadOnly]
     filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ['status','payment_status','restaurant_name']
-    ordering_fields =['is_active','total','total']
-
+    search_fields = ['status', 'payment_status', 'restaurant_name']
+    ordering_fields = ['is_active', 'total', 'total']
 
     def get_queryset(self):
         return Order.objects.select_related('customer')
-

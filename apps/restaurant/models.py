@@ -6,6 +6,7 @@ from decimal import Decimal
 from uuid import uuid4
 from .managers import (CuisineManager, FoodCategoryManager,RestaurantManager)
 
+
 class Address(models.Model):
 
     ADDRESS_TYPES = [
@@ -39,11 +40,7 @@ class Cuisine(models.Model):
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=100, unique=True)
     description = models.TextField(blank=True)
-    image = models.ImageField(
-        upload_to='cuisine_images/',
-        blank=True,
-        null=True
-    )
+    image = models.ImageField(upload_to='cuisine_images/', blank=True, null=True)
     objects = CuisineManager()
 
     class Meta:
@@ -206,7 +203,7 @@ class PaymentMethod(models.Model):
 
     class Meta:
         ordering = ['is_active']
-        indexes =[ models.Index(fields=['is_active',]) ]
+        indexes = [models.Index(fields=['is_active',]) ]
 
     def __str__(self):
         return f"{self.payment_type}"
@@ -222,11 +219,11 @@ class DeliveryMethod(models.Model):
 
     delivery_type = models.CharField(max_length=20, choices=METHOD_TYPES,unique=True)
     description = models.TextField(blank=True)
-    base_fee = models.DecimalField( max_digits=6,decimal_places=2, validators=[MinValueValidator(0)])
+    base_fee = models.DecimalField(max_digits=6,decimal_places=2, validators=[MinValueValidator(0)])
     distance_fee = models.DecimalField(
-        max_digits=6, decimal_places=2,validators=[MinValueValidator(0)],default=0.00,help_text="Per kilometer charge"
+        max_digits=6, decimal_places=2, validators=[MinValueValidator(0)], default=0.00,help_text="Per kilometer charge"
     )
-    min_order_amount = models.DecimalField(max_digits=10,decimal_places=2,validators=[MinValueValidator(0)],default=0.00
+    min_order_amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)], default=0.00
     )
     is_active = models.BooleanField(default=True)
 
@@ -355,7 +352,7 @@ class Order(models.Model):
     def save(self, *args, **kwargs):
         if not self.order_number:
             date_part = timezone.now().strftime('%Y%m%d')
-            last_order = Order.objects.order_by('-id').first() # last order
+            last_order = Order.objects.order_by('-id').first()
             sequence = (last_order.id + 1) if last_order else 1
             self.order_number = f"ORD-{date_part}-{sequence:06d}"
 
@@ -366,7 +363,6 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order #{self.order_number}"
-
 
 
 class OrderItem(models.Model):
