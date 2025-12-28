@@ -4,17 +4,34 @@ from dotenv import load_dotenv
 load_dotenv()
 
 ALLOWED_HOSTS = ["*"]
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
+        'ENGINE': 'django.db.backends.mysql',
         'NAME': os.getenv("NAME"),
         'USER': os.getenv("USER"),
         'PASSWORD': os.getenv("DB_PASSWORD"),
         'HOST': os.getenv("HOST"),
-        'PORT': os.getenv("PORT"),
-
+        'PORT':  os.getenv("PORT", "3306"),
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'"
+        
     }
 }
+}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': os.getenv("NAME"),
+#         'USER': os.getenv("USER"),
+#         'PASSWORD': os.getenv("DB_PASSWORD"),
+#         'HOST': os.getenv("HOST"),
+#         'PORT': os.getenv("PORT"),
+#         'OPTIONS':{
+#           'sslmode': 'require'
+#         }
+#     }
+# }
 
 # email
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

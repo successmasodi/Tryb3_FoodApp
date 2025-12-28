@@ -1,11 +1,11 @@
 from django.urls import path, include
 from . import views
-# from rest_framework import routers
-from rest_framework_nested import routers
+from rest_framework import routers
 
 router = routers.DefaultRouter()
 
 router.register('profile/addresses', views.AddressViewSet, basename='addresses')
+<<<<<<< HEAD
 
 # only admin
 router.register('payment-methods', views.PaymentMethodViewSet, basename='payment_methods')
@@ -26,6 +26,13 @@ router.register('orders', views.OrderViewSet, basename='orders')
 urlpatterns = [
     path("carts/add-items/", views.AddCartItemsApiVIew.as_view(), name='cart_add_items'),
 
+=======
+router.register('cuisine-types', views.CuisineViewSet, basename='cuisines')
+router.register('categories', views.FoodCategoryViewSet, basename='categories')
+router.register('restaurants', views.RestaurantViewSet, basename='restaurants')
+router.register('dishes', views.DishViewSet, basename='dishes')
+
+urlpatterns = [
+>>>>>>> f753283344a55e4e45cb1213f645c638645f541f
     path("", include(router.urls)),
-    # path("", include(carts_router.urls)),
 ]

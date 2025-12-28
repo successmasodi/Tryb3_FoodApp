@@ -1,14 +1,16 @@
-from django.db import transaction
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.generics import ListCreateAPIView
 from rest_framework.filters import SearchFilter, OrderingFilter
-from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
-from decimal import Decimal
+from django.utils.decorators import method_decorator
+from apps.restaurant.documentation.restaurant.schemas import (
+    cuisine_docs, food_category_docs, restaurant_docs, dish_docs,
+    address_docs
+)
 from .models import (
+<<<<<<< HEAD
     Address, Cuisine, FoodCategory, Restaurant, Dish, Cart, CartItem, PaymentMethod, DeliveryMethod,
     Order, OrderItem
 )
@@ -28,6 +30,21 @@ from .payment_processing import get_processor
 class AddressViewSet(ModelViewSet):
     serializer_class = AddressSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+=======
+    Address, Cuisine, FoodCategory, Restaurant, Dish
+)
+from .serializers import (
+    AddressSerializer, CuisineSerializer, FoodCategorySerializer,
+    RestaurantSerializer, DishSerializer
+)
+from .permissions import (
+    IsAdminOrReadOnly, IsOwnerOrReadOnly, AlreadyExist, IsRestaurantOwnerOrReadOnly
+)
+
+class AddressViewSet(ModelViewSet):
+    serializer_class = AddressSerializer
+    permission_classes = [IsOwnerOrReadOnly]
+>>>>>>> f753283344a55e4e45cb1213f645c638645f541f
 
     def get_queryset(self):
         return Address.objects.select_related('owner').filter(owner=self.request.user)
@@ -35,11 +52,11 @@ class AddressViewSet(ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
+for method_name, decorator_func in address_docs.items():
+    AddressViewSet = method_decorator(name=method_name, decorator=decorator_func)(AddressViewSet)
+
 
 class CuisineViewSet(ModelViewSet):
-    '''View for cuisine. search by name, ordered by name and 
-    restaurant_count: number of restaurant under the cuisine'''
-
     queryset = Cuisine.objects.all()
     serializer_class = CuisineSerializer
     permission_classes = [IsAdminOrReadOnly]
@@ -47,20 +64,38 @@ class CuisineViewSet(ModelViewSet):
     search_fields = ['name']
     ordering_fields = ['name', 'restaurant_count']
 
+    def destroy(self, request, *args, **kwargs):
+        cuisine = self.get_object()
+        if cuisine.restaurants.exists():
+            return Response({'status': 'error', 'message': 'cuisine is related to one or more objects restaurant. '
+                           'Remove this relation before you can delete it'}, status=status.HTTP_400_BAD_REQUEST)
+        return super().destroy(request, *args, **kwargs)
+
+for method_name, decorator_func in cuisine_docs.items():
+    CuisineViewSet = method_decorator(decorator_func, name=method_name)(CuisineViewSet)
+
 
 class FoodCategoryViewSet(ModelViewSet):
-    '''View for Food category. search by name, ordered by name and 
-    dish_count: number of dishes under the category'''
-
     queryset = FoodCategory.objects.all()
     serializer_class = FoodCategorySerializer
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [SearchFilter, OrderingFilter]
     search_fields = ['name']
-    ordering_fields = ['name', 'dish_count']
+    ordering_fields = ['name', 'menu_count']
+
+    def destroy(self, request, *args, **kwargs):
+        category = self.get_object()
+        if category.dishes.exists():
+            return Response({'status': 'error', 'message': 'category is related to one or more objects dishes. '
+                           'Remove this relation before you can delete it.'}, status=status.HTTP_400_BAD_REQUEST)
+        return super().destroy(request, *args, **kwargs)
+
+for method_name, decorator_func in food_category_docs.items():
+    FoodCategoryViewSet = method_decorator(decorator_func, name=method_name)(FoodCategoryViewSet)
 
 
 class RestaurantViewSet(ModelViewSet):
+<<<<<<< HEAD
     '''View for Restaurant.
     search by:
         'name', 'address', 'cuisine name', 'dishes name'
@@ -74,6 +109,8 @@ class RestaurantViewSet(ModelViewSet):
     permission: Only owner can modify object.
     '''
 
+=======
+>>>>>>> f753283344a55e4e45cb1213f645c638645f541f
     queryset = Restaurant.objects.select_related('owner', 'cuisine').prefetch_related('dishes')
     serializer_class = RestaurantSerializer
     permission_classes = [IsOwnerOrReadOnly]
@@ -87,8 +124,11 @@ class RestaurantViewSet(ModelViewSet):
         return permissions
 
     def perform_create(self, serializer):
+        if  Restaurant.objects.filter(owner=self.request.user).exists():
+            raise ValidationError('You own a restaurant already.')
         serializer.save(owner=self.request.user)
 
+<<<<<<< HEAD
     def get_serializer_context(self):
         return {'user': self.request.user}
 
@@ -107,8 +147,16 @@ class DishViewSet(ModelViewSet):
 
     queryset = Dish.objects.select_related('restaurant', 'restaurant__cuisine'
                                            ).prefetch_related('category')
+=======
+for method_name, decorator_func in restaurant_docs.items():
+    RestaurantViewSet = method_decorator(decorator_func, name=method_name)(RestaurantViewSet)
+
+
+class DishViewSet(ModelViewSet):
+    queryset = Dish.objects.select_related('restaurant__cuisine').prefetch_related('restaurant', 'category')
+>>>>>>> f753283344a55e4e45cb1213f645c638645f541f
     serializer_class = DishSerializer
-    # permission_classes = [ IsRestaurantOwnerOrReadOnly]
+    permission_classes = [IsRestaurantOwnerOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     search_fields = ['name', 'restaurant__name', 'category__name']
     filterset_fields = [
@@ -119,11 +167,14 @@ class DishViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         restaurant = Restaurant.objects.filter(owner=self.request.user).first()
+        if not restaurant:
+            raise ValidationError('You should own a restaurant before creating a dish.')
         serializer.save(restaurant=restaurant)
 
     def get_serializer_context(self):
         return {'user': self.request.user}
 
+<<<<<<< HEAD
 
 class CartViewSet(ModelViewSet):
     '''include the Cart_id in the body to include other instruction,
@@ -262,3 +313,7 @@ class OrderViewSet(ModelViewSet):
 
     def get_queryset(self):
         return Order.objects.select_related('customer')
+=======
+for method_name, decorator_func in dish_docs.items():
+    DishViewSet = method_decorator(name=method_name, decorator=decorator_func)(DishViewSet)
+>>>>>>> f753283344a55e4e45cb1213f645c638645f541f

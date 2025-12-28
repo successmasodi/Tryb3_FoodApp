@@ -1,10 +1,53 @@
+''''
+Models that requires name and slug should inherit the SLug model mixin.
+This model handles generic slug unique slug field generation 
+'''
+
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
-from django.utils import timezone,text
+from django.utils import timezone, text
 from django.conf import settings
-from decimal import Decimal
-from uuid import uuid4
-from .managers import (CuisineManager, FoodCategoryManager,RestaurantManager)
+from .managers import (CuisineManager, FoodCategoryManager, RestaurantManager)
+
+
+class SlugModelMixin(models.Model):
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True, blank=True)
+
+    class Meta:
+        abstract = True
+
+    def generate_unique_slug(self):
+        base_slug = text.slugify(self.name)
+        slug = base_slug
+        ModelClass = self.__class__
+
+        existing_slugs = ModelClass.objects.filter(slug__startswith=base_slug).values_list('slug', flat=True)
+        if slug not in existing_slugs:
+            return slug
+
+        count = 1
+        while slug in existing_slugs:
+            slug = f'{base_slug}-{count}'
+            count += 1
+        return slug
+
+    def save(self, *args, **kwargs):
+        generate_slug = not self.slug
+
+        if self.pk:
+            try:
+                obj = self.__class__.objects.get(pk=self.pk)
+                if obj.name != self.name:
+                    generate_slug = True
+            except self.__class__.DoesNotExist:
+                generate_slug = True
+
+        if generate_slug:
+            self.slug = self.generate_unique_slug()
+
+        super().save(*args, **kwargs)
+
 
 
 class Address(models.Model):
@@ -17,7 +60,7 @@ class Address(models.Model):
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='addresses')
     street_address = models.CharField(max_length=255)
-    address_type = models.CharField(max_length=20, choices=ADDRESS_TYPES,default='home')
+    address_type = models.CharField(max_length=20, choices=ADDRESS_TYPES, default='home')
     city = models.CharField(max_length=100)
     state = models.CharField(max_length=100)
     country = models.CharField(max_length=100)
@@ -31,14 +74,12 @@ class Address(models.Model):
 
     def save(self, *args, **kwargs):
         if self.is_default:
-            # Ensure only one default address per user
-            Address.objects.filter(customer=self.customer, is_default=True).update(is_default=False)
+            Address.objects.filter(customer=self.owner, is_default=True).update(is_default=False)
         super().save(*args, **kwargs)
 
 
-class Cuisine(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+class Cuisine(SlugModelMixin):
+
     description = models.TextField(blank=True)
     image = models.ImageField(upload_to='cuisine_images/', blank=True, null=True)
     objects = CuisineManager()
@@ -48,18 +89,13 @@ class Cuisine(models.Model):
         verbose_name_plural = 'Cuisines'
         ordering = ('name',)
 
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            self.slug = text.slugify(self.name)
-        super().save(*args, **kwargs)
-
     def __str__(self):
         return self.name
 
 
-class FoodCategory(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+class FoodCategory(SlugModelMixin):
+
+
     description = models.TextField(blank=True)
     objects = FoodCategoryManager()
 
@@ -68,52 +104,23 @@ class FoodCategory(models.Model):
         verbose_name_plural = 'Food Categories'
         ordering = ('name',)
 
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            self.slug = text.slugify(self.name)
-        super().save(*args, **kwargs)
-
     def __str__(self):
         return self.name
 
- 
-class Restaurant(models.Model):
-    owner = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.PROTECT,
-        related_name='restaurant_owner'
-    )
+
+class Restaurant(SlugModelMixin):
+    owner = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='restaurant_owner')
     name = models.CharField(max_length=255, unique=True, help_text='name of your restaurant must be unique to your business.')
-    slug = models.SlugField(max_length=255, unique=True)
     description = models.TextField(blank=True)
     address = models.TextField()
-    cuisine = models.ForeignKey(
-        Cuisine,
-        on_delete=models.PROTECT,
-        related_name='restaurants'
-    )
+    cuisine = models.ForeignKey(Cuisine, on_delete=models.PROTECT, related_name='restaurants')
     rating = models.DecimalField(
-        max_digits=3,
-        decimal_places=1,
-        default=0.0,
-        validators=[MinValueValidator(0.0), MaxValueValidator(5.0)]
+        max_digits=3, decimal_places=1, default=0.0, validators=[MinValueValidator(0.0), MaxValueValidator(5.0)]
     )
-    delivery_time = models.CharField(max_length=100,
-        help_text="Average delivery time in minutes"
-    )
-    minimum_order = models.IntegerField(
-        default=1
-    )
-    image = models.ImageField(
-        upload_to='restaurant_images/',
-        blank=True,
-        null=True
-    )
-    cover_image = models.ImageField(
-        upload_to='restaurant_cover_images/',
-        blank=True,
-        null=True
-    )
+    delivery_time = models.CharField(max_length=100,help_text="Average delivery time in minutes")
+    minimum_order = models.IntegerField(default=1)
+    image = models.ImageField(upload_to='restaurant_images/', blank=True, null=True)
+    cover_image = models.ImageField(upload_to='restaurant_cover_images/', blank=True, null=True)
     is_featured = models.BooleanField(default=False)
     is_active = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
@@ -127,34 +134,17 @@ class Restaurant(models.Model):
             models.Index(fields=['cuisine', 'is_featured']),
             models.Index(fields=['rating']),
         ]
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            self.slug = text.slugify(self.name)
-        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.name} ({self.cuisine.name})"
 
 
-class Dish(models.Model):
+class Dish(SlugModelMixin):
     #same as menu
-    restaurant = models.ForeignKey(
-        Restaurant,
-        on_delete=models.CASCADE,
-        related_name='dishes'
-    )
-    name = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=255, unique=True)
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='dishes')
     description = models.TextField(blank=True)
-    unit_price = models.DecimalField(
-        max_digits=10, decimal_places=2,
-        validators=[MinValueValidator(0.01)]
-    )
-    category = models.ForeignKey(
-        FoodCategory,
-        on_delete=models.SET_NULL,
-        related_name='dishes', null=True
-    )
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0.01)])
+    category = models.ForeignKey(FoodCategory, on_delete=models.PROTECT, related_name='dishes')
     preparation_time = models.IntegerField(help_text="Preparation time in minutes")
     is_vegetarian = models.BooleanField(default=False)
     is_vegan = models.BooleanField(default=False)
@@ -169,11 +159,13 @@ class Dish(models.Model):
         verbose_name_plural = 'Dishes'
         ordering = ('is_featured', 'is_available', 'unit_price', 'name')
         indexes = [
+            models.Index(fields=['slug']),
             models.Index(fields=[ 'is_featured','is_available', 'unit_price', 'name',]),
         ]
 
     def __str__(self):
         return f"{self.name} from {self.restaurant.name} - N{self.unit_price}"
+<<<<<<< HEAD
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -377,3 +369,5 @@ class OrderItem(models.Model):
     def sub_total(self):
         return Decimal(self.unit_price * self.quantity)
 
+=======
+>>>>>>> f753283344a55e4e45cb1213f645c638645f541f
